@@ -1,0 +1,41 @@
+{
+    auto_https off
+    order coraza_waf first
+    admin off
+    log {
+        output stdout
+        format console
+        level WARN
+    }
+}
+
+127.0.0.1:8092 {
+    coraza_waf {
+        load_owasp_crs
+        directives `
+            Include /etc/ngx-json-guard/coraza/active.conf
+        `
+    }
+
+    header X-Benchmark-Engine "native-coraza-caddy"
+
+    handle /healthz {
+        respond "ok" 200
+    }
+
+    handle_path /json/* {
+        reverse_proxy __BACKEND_HOST__:__BACKEND_PORT__
+    }
+    handle_path /xml/* {
+        reverse_proxy __BACKEND_HOST__:__BACKEND_PORT__
+    }
+    handle_path /form/* {
+        reverse_proxy __BACKEND_HOST__:__BACKEND_PORT__
+    }
+    handle_path /web/* {
+        reverse_proxy __BACKEND_HOST__:__BACKEND_PORT__
+    }
+    handle {
+        respond "not found" 404
+    }
+}

@@ -1,0 +1,15 @@
+FROM caddy:2.11.3-builder AS builder
+
+RUN xcaddy build \
+    --with github.com/corazawaf/coraza-caddy/v2@82f09c076b75f0096b8c9ebc58e1ce53e2947198
+
+FROM caddy:2.11.3
+
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+COPY benchmark/Caddyfile /etc/caddy/Caddyfile
+
+RUN mkdir -p /var/log/coraza /tmp/coraza
+
+EXPOSE 8080
+
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]

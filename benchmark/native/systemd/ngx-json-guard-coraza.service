@@ -1,0 +1,26 @@
+[Unit]
+Description=ngx_json_guard native benchmark Coraza/Caddy target
+After=network.target
+Conflicts=ngx-json-guard-nginx.service
+
+[Service]
+Type=simple
+User=ngxjsonbench
+Group=ngxjsonbench
+RuntimeDirectory=ngx-json-guard
+StateDirectory=ngx-json-guard
+LogsDirectory=ngx-json-guard
+Environment=HOME=/var/lib/ngx-json-guard/caddy
+ExecStartPre=/opt/ngx-json-guard/bin/caddy validate --config /etc/ngx-json-guard/coraza/Caddyfile --adapter caddyfile
+ExecStart=/opt/ngx-json-guard/bin/caddy run --config /etc/ngx-json-guard/coraza/Caddyfile --adapter caddyfile
+Restart=no
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/ngx-json-guard /var/log/ngx-json-guard /run/ngx-json-guard
+LimitNOFILE=65536
+OOMPolicy=stop
+
+[Install]
+WantedBy=multi-user.target

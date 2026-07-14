@@ -1,0 +1,14 @@
+services:
+  ngx_json_guard:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ngx_json_guard:test
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s

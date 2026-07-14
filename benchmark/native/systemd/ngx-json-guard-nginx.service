@@ -1,0 +1,26 @@
+[Unit]
+Description=ngx_json_guard native benchmark NGINX target
+After=network.target
+Conflicts=ngx-json-guard-coraza.service
+
+[Service]
+Type=simple
+User=ngxjsonbench
+Group=ngxjsonbench
+RuntimeDirectory=ngx-json-guard
+StateDirectory=ngx-json-guard
+LogsDirectory=ngx-json-guard
+Environment=LD_LIBRARY_PATH=/opt/ngx-json-guard/modsecurity/lib:/opt/ngx-json-guard/modsecurity/lib64
+ExecStartPre=/opt/ngx-json-guard/nginx/sbin/nginx -t -c /etc/ngx-json-guard/nginx/nginx.conf
+ExecStart=/opt/ngx-json-guard/nginx/sbin/nginx -c /etc/ngx-json-guard/nginx/nginx.conf -g "daemon off;"
+Restart=no
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/ngx-json-guard /var/log/ngx-json-guard /run/ngx-json-guard
+LimitNOFILE=65536
+OOMPolicy=stop
+
+[Install]
+WantedBy=multi-user.target

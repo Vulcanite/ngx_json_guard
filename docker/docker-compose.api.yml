@@ -1,0 +1,77 @@
+x-api: &api
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.api
+  image: ngx_json_guard_api:test
+  expose:
+    - "9000"
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/health', timeout=2).read()"]
+    interval: 5s
+    timeout: 3s
+    retries: 30
+    start_period: 5s
+
+services:
+  json_api:
+    <<: *api
+    container_name: ngx_json_guard_json_api
+    environment:
+      APP_MODE: json
+      APP_NAME: json-api
+      MAX_LOG_PAIRS: "20"
+
+  xml_api:
+    <<: *api
+    container_name: ngx_json_guard_xml_api
+    environment:
+      APP_MODE: xml
+      APP_NAME: xml-api
+
+  form_api:
+    <<: *api
+    container_name: ngx_json_guard_form_api
+    environment:
+      APP_MODE: form
+      APP_NAME: form-api
+
+  web_app:
+    <<: *api
+    container_name: ngx_json_guard_web_app
+    environment:
+      APP_MODE: web
+      APP_NAME: web-app
+
+  ngx_json_guard_api_nginx:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ngx_json_guard:test
+    container_name: ngx_json_guard_api_nginx
+    # Simulated WAF node capacity. Upstreams are separate from this budget.
+    cpus: "2.0"
+    mem_limit: 4g
+    memswap_limit: 4g
+    depends_on:
+      json_api:
+        condition: service_healthy
+      xml_api:
+        condition: service_healthy
+      form_api:
+        condition: service_healthy
+      web_app:
+        condition: service_healthy
+    environment:
+      START_INTERNAL_BACKEND: "0"
+      BACKEND_HEALTH_URL: "http://json_api:9000/health"
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./nginx.api.conf:/etc/nginx/nginx.conf:ro
+      - ../conf/modsecurity/${WAF_CONFIG:-main.conf}:/etc/nginx/modsec/main.conf:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 10s

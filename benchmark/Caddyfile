@@ -1,0 +1,45 @@
+{
+    auto_https off
+    order coraza_waf first
+    admin off
+    log {
+        output stdout
+        format console
+        level WARN
+    }
+}
+
+:8080 {
+    coraza_waf {
+        load_owasp_crs
+        directives `
+            Include /etc/coraza/benchmark.conf
+        `
+    }
+
+    header X-Benchmark-Engine "coraza-caddy"
+
+    handle /healthz {
+        respond "ok" 200
+    }
+
+    handle_path /json/* {
+        reverse_proxy json_api:9000
+    }
+
+    handle_path /xml/* {
+        reverse_proxy xml_api:9000
+    }
+
+    handle_path /form/* {
+        reverse_proxy form_api:9000
+    }
+
+    handle_path /web/* {
+        reverse_proxy web_app:9000
+    }
+
+    handle {
+        respond "not found" 404
+    }
+}

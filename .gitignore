@@ -1,0 +1,52 @@
+# C build outputs
+*.a
+*.o
+*.so
+*.dSYM/
+/build/
+/dist/
+/tests/bench_json_guard_parser
+/tests/test_json_guard_parser
+/tests/test_json_guard_parser_asan
+
+# Coverage, profiling, and crash output
+*.gcda
+*.gcno
+*.gcov
+*.profraw
+*.profdata
+core
+core.*
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+*.pyo
+.coverage
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.venv/
+venv/
+
+# Generated benchmark payloads, reports, logs, and bundles
+/artifacts/
+/tmp/
+*.log
+*.pid
+*.tar.zst
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+docker-compose.override.yml
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*~
+*.swp
+*.swo

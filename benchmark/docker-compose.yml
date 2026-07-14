@@ -1,0 +1,97 @@
+name: ngx-json-guard-cross-waf
+
+x-api: &api
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.api
+  image: ngx_json_guard_api:test
+  expose:
+    - "9000"
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/health', timeout=2).read()"]
+    interval: 5s
+    timeout: 3s
+    retries: 30
+    start_period: 5s
+
+services:
+  json_api:
+    <<: *api
+    environment:
+      APP_MODE: json
+      APP_NAME: cross-waf-json-api
+      MAX_LOG_PAIRS: "0"
+
+  xml_api:
+    <<: *api
+    environment:
+      APP_MODE: xml
+      APP_NAME: cross-waf-xml-api
+
+  form_api:
+    <<: *api
+    environment:
+      APP_MODE: form
+      APP_NAME: cross-waf-form-api
+
+  web_app:
+    <<: *api
+    environment:
+      APP_MODE: web
+      APP_NAME: cross-waf-web-app
+
+  nginx_waf:
+    profiles: ["nginx"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ngx_json_guard:test
+    container_name: ngx_json_guard_cross_nginx
+    cpus: "2.0"
+    mem_limit: 4g
+    memswap_limit: 4g
+    depends_on:
+      json_api: { condition: service_healthy }
+      xml_api: { condition: service_healthy }
+      form_api: { condition: service_healthy }
+      web_app: { condition: service_healthy }
+    environment:
+      START_INTERNAL_BACKEND: "0"
+      BACKEND_HEALTH_URL: "http://json_api:9000/health"
+    ports:
+      - "8091:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/${BENCH_NGINX_PROFILE:-off.conf}:/etc/nginx/benchmark/profile.conf:ro
+      - ./modsecurity/${BENCH_RULE_PROFILE:-processor.conf}:/etc/nginx/modsec/benchmark.conf:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
+      interval: 3s
+      timeout: 2s
+      retries: 30
+
+  coraza_waf:
+    profiles: ["coraza"]
+    build:
+      context: ..
+      dockerfile: benchmark/Dockerfile.coraza
+    image: ngx_json_guard_coraza:test
+    container_name: ngx_json_guard_cross_coraza
+    cpus: "2.0"
+    mem_limit: 4g
+    memswap_limit: 4g
+    depends_on:
+      json_api: { condition: service_healthy }
+      xml_api: { condition: service_healthy }
+      form_api: { condition: service_healthy }
+      web_app: { condition: service_healthy }
+    ports:
+      - "8092:8080"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./coraza/${BENCH_RULE_PROFILE:-processor.conf}:/etc/coraza/benchmark.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:8080/healthz"]
+      interval: 3s
+      timeout: 2s
+      retries: 30
