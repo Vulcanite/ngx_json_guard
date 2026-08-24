@@ -2,6 +2,13 @@
 
 **Post-read chunked JSON structural guard for NGINX — used *before* ModSecurity, not instead of it.**
 
+> **Documentation site:** the full docs (why this was built, Linux and
+> Docker installation, configuration reference, engine comparison, and
+> performance graphs) live in [`docs-site/`](docs-site/). Run it locally:
+> `cd docs-site && npm install && npm start`. Diagram sources are
+> collected in [`DIAGRAMS.md`](DIAGRAMS.md), and fresh benchmark results
+> are in [`BENCHMARK.md`](BENCHMARK.md).
+
 `ngx_json_guard` is an NGINX C module that validates large JSON request bodies against structural safety limits with a streaming parser. The current NGINX integration is **post-read chunked validation**: NGINX first reads/spools the body through its normal request-body path, then this module walks the resulting buffers/temp file in bounded chunks. It helps you safely enable **full** ModSecurity / CRS inspection of large JSON bodies by rejecting malformed or structurally abusive JSON before upstream handling, while still preserving the body for later full inspection.
 
 > **This is NOT a WAF.**  
@@ -163,6 +170,9 @@ make test-asan
 ```
 
 ### Benchmark
+
+Current results across NGINX, ModSecurity, and Coraza live in
+[BENCHMARK.md](BENCHMARK.md).
 
 ```bash
 # Generate large JSON
