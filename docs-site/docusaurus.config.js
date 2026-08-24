@@ -57,7 +57,7 @@ const config = {
           {
             title: 'Docs',
             items: [
-              { label: 'Why it was built', to: '/docs/intro/why' },
+              { label: 'Why it was built', to: '/docs/' },
               { label: 'NGINX configuration', to: '/docs/configuration/nginx' },
               { label: 'Engine comparison', to: '/docs/comparison/engines' },
             ],

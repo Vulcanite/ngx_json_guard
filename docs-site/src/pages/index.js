@@ -188,7 +188,7 @@ export default function Home() {
             </p>
             <Link
               className="button button--primary button--lg"
-              to={useBaseUrl('/docs/intro/why')}>
+              to={useBaseUrl('/docs/')}>
               Why it was built
             </Link>
           </div>
