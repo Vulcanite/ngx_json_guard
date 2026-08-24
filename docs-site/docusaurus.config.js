@@ -81,15 +81,6 @@ const config = {
           light: 'base',
           dark: 'dark',
         },
-        options: {
-          themeVariables: {
-            primaryColor: '#eef4ff',
-            primaryBorderColor: '#3b74d2',
-            primaryTextColor: '#12233f',
-            lineColor: '#5b7191',
-            fontFamily: 'system-ui, sans-serif',
-          },
-        },
       },
     },
 };

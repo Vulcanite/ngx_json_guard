@@ -30,13 +30,13 @@ flowchart LR
     G -- "valid structure" --> M[ModSecurity + CRS<br/>full inspection]
     M -- "attack found → 403" --> X3([Blocked])
     M -- "clean → 200" --> U([Upstream app])
-    style G fill:#eef4ff,stroke:#3b74d2,stroke-width:2px
-    style M fill:#fff3e0,stroke:#e08c2e,stroke-width:2px
-    style C fill:#e8f5e9,stroke:#3d9a4f
-    style U fill:#e8f5e9,stroke:#3d9a4f
-    style X1 fill:#fdecea,stroke:#c0392b
-    style X2 fill:#fdecea,stroke:#c0392b
-    style X3 fill:#fdecea,stroke:#c0392b
+    style G fill:#2e6db5,stroke:#173d75,color:#ffffff,stroke-width:2px
+    style M fill:#b96a20,stroke:#7d4a13,color:#ffffff,stroke-width:2px
+    style C fill:#2f8f4e,stroke:#1c5c31,color:#ffffff
+    style U fill:#2f8f4e,stroke:#1c5c31,color:#ffffff
+    style X1 fill:#c0392b,stroke:#7d241a,color:#ffffff
+    style X2 fill:#c0392b,stroke:#7d241a,color:#ffffff
+    style X3 fill:#c0392b,stroke:#7d241a,color:#ffffff
 ```
 
 ## 2. Request lifecycle (sequence)
@@ -83,11 +83,11 @@ flowchart TB
     end
     W --> S
     S --> O["Reject / Accept only<br/>no document retained"]
-    style S fill:#eef4ff,stroke:#3b74d2,stroke-width:2px
-    style W fill:#f3eefc,stroke:#7a4fd2,stroke-width:2px
-    style O fill:#e8f5e9,stroke:#3d9a4f
-    style B1 fill:#fff8e6,stroke:#c9a227
-    style B2 fill:#fff8e6,stroke:#c9a227
+    style S fill:#2e6db5,stroke:#173d75,color:#ffffff,stroke-width:2px
+    style W fill:#6d4fc4,stroke:#4a3389,color:#ffffff,stroke-width:2px
+    style O fill:#2f8f4e,stroke:#1c5c31,color:#ffffff
+    style B1 fill:#b98f1f,stroke:#7a5f13,color:#ffffff
+    style B2 fill:#b98f1f,stroke:#7a5f13,color:#ffffff
 ```
 
 ## 4. Structural classes rejected at the edge
@@ -160,11 +160,19 @@ xychart-beta
 
 ### Style conventions used
 
+- **Dual-theme safety first.** The docs site renders diagrams in both a
+  light and a dark Mermaid theme; theme-level `themeVariables` are *not*
+  shared between them. Styled nodes therefore use saturated mid-tone
+  fills with explicit white text (`fill:#…,color:#ffffff`) so they stay
+  readable on white and near-black page backgrounds alike. Pastel fills
+  are avoided on purpose — they break in dark mode.
 - Flowcharts: rounded `([...])` terminals for actors/outcomes, straight
-  `[...]` for processing stages, `{...}` for decisions; three-color
-  semantic palette (blue = guard, orange = ModSecurity/CRS, red = reject,
-  green = pass-through) applied via `classDef`-equivalent inline `style`.
+  `[...]` for processing stages, `{...}` for decisions; semantic palette
+  (blue = guard, orange = ModSecurity/CRS, red = reject, green =
+  pass-through, purple = walker, amber = body storage).
 - Sequence diagrams: `autonumber`, `alt` lanes for the three validation
   outcomes, `<br/>` for two-line labels to keep frames narrow.
-- Charts: `xychart-beta` bars, y-axis maxima set one round step above the
-  tallest bar so labels never clip.
+- Charts: `xychart-beta` bars inherit the active Mermaid theme's text
+  colors (dark text in light mode, light text in dark mode); y-axis
+  maxima are set one round step above the tallest bar so labels never
+  clip.

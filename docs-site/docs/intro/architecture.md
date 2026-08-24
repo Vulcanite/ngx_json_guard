@@ -74,11 +74,11 @@ flowchart TB
     end
     W --> S
     S --> O["Reject / Accept only<br/>no document retained"]
-    style S fill:#eef4ff,stroke:#3b74d2,stroke-width:2px
-    style W fill:#f3eefc,stroke:#7a4fd2,stroke-width:2px
-    style O fill:#e8f5e9,stroke:#3d9a4f
-    style B1 fill:#fff8e6,stroke:#c9a227
-    style B2 fill:#fff8e6,stroke:#c9a227
+    style S fill:#2e6db5,stroke:#173d75,color:#ffffff,stroke-width:2px
+    style W fill:#6d4fc4,stroke:#4a3389,color:#ffffff,stroke-width:2px
+    style O fill:#2f8f4e,stroke:#1c5c31,color:#ffffff
+    style B1 fill:#b98f1f,stroke:#7a5f13,color:#ffffff
+    style B2 fill:#b98f1f,stroke:#7a5f13,color:#ffffff
 ```
 
 Nesting beyond the internal hard ceiling (1024) is clamped at

@@ -48,13 +48,13 @@ flowchart LR
     G -- "valid structure" --> M[ModSecurity + CRS<br/>full inspection]
     M -- "attack found → 403" --> X3([Blocked])
     M -- "clean → 200" --> U([Upstream app])
-    style G fill:#eef4ff,stroke:#3b74d2,stroke-width:2px
-    style M fill:#fff3e0,stroke:#e08c2e,stroke-width:2px
-    style C fill:#e8f5e9,stroke:#3d9a4f
-    style U fill:#e8f5e9,stroke:#3d9a4f
-    style X1 fill:#fdecea,stroke:#c0392b
-    style X2 fill:#fdecea,stroke:#c0392b
-    style X3 fill:#fdecea,stroke:#c0392b
+    style G fill:#2e6db5,stroke:#173d75,color:#ffffff,stroke-width:2px
+    style M fill:#b96a20,stroke:#7d4a13,color:#ffffff,stroke-width:2px
+    style C fill:#2f8f4e,stroke:#1c5c31,color:#ffffff
+    style U fill:#2f8f4e,stroke:#1c5c31,color:#ffffff
+    style X1 fill:#c0392b,stroke:#7d241a,color:#ffffff
+    style X2 fill:#c0392b,stroke:#7d241a,color:#ffffff
+    style X3 fill:#c0392b,stroke:#7d241a,color:#ffffff
 ```
 
 The measurements behind this picture are in
