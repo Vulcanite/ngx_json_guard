@@ -4,7 +4,7 @@ CC       ?= cc
 CFLAGS   ?= -Wall -Wextra -Werror -O2
 CPPFLAGS += -I./src
 
-.PHONY: all test test-asan bench clean integration docker-build docker-test payloads \
+.PHONY: all test test-asan bench bench-micro clean integration docker-build docker-test payloads \
 	waf-correctness waf-perf cross-waf-smoke cross-waf-quick cross-waf-full \
 	cross-waf-large native-setup native-smoke native-quick native-full \
 	native-large native-check native-api-setup native-api-status native-api-collect
@@ -37,6 +37,19 @@ test-asan: payloads
 
 bench: tests/bench_json_guard_parser
 	./scripts/bench_parser.sh
+
+tests/bench_json_guard_repeat: tests/bench_json_guard_repeat.c src/json_guard_parser.c \
+                               src/json_guard_parser.h src/json_guard_limits.h
+	$(CC) $(CFLAGS) $(CPPFLAGS) tests/bench_json_guard_repeat.c src/json_guard_parser.c \
+		-o tests/bench_json_guard_repeat
+
+# Median-of-15 parser micro benchmark over generated payload sizes.
+bench-micro: tests/bench_json_guard_repeat
+	@for mb in 0.1 1 10 20; do \
+		python3 scripts/gen_large_json.py --size-mb $$mb --output /tmp/jg_micro_$${mb}m.json >/dev/null; \
+		printf "%-12s " "$${mb} MiB"; \
+		./tests/bench_json_guard_repeat /tmp/jg_micro_$${mb}m.json 15; \
+	done
 
 docker-build:
 	docker build -f docker/Dockerfile -t ngx_json_guard:test .
