@@ -151,7 +151,7 @@ export default function Home() {
               structure?</i> Content inspection stays where it belongs.
             </p>
             <div className={styles.diagramWrap}>
-              <Mermaid chart={ARCH_DIAGRAM} />
+              <Mermaid value={ARCH_DIAGRAM} />
             </div>
           </div>
         </section>
