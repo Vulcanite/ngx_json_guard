@@ -95,4 +95,4 @@ before any engine starts.
 
 The complete methodology, raw tables, and reproduction steps are in
 `BENCHMARK.md` in the repository root, and the headline numbers are on the
-[Performance](/performance/results) page.
+[Performance](/docs/performance/results) page.

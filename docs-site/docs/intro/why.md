@@ -1,5 +1,4 @@
 ---
-slug: /
 sidebar_position: 0
 ---
 
@@ -58,7 +57,7 @@ flowchart LR
 ```
 
 The measurements behind this picture are in
-[Performance](/performance/results): the guard's own cost is about
+[Performance](/docs/performance/results): the guard's own cost is about
 **0.67% of a full CRS scan** on an accepted 20 MiB body, roughly
 **10 µs** on a typical small API body — and with the guard in front, CRS
 still catches an SQL injection planted at the tail of a 20 MiB document,
@@ -92,5 +91,5 @@ This module is deliberately narrow, and the boundaries are the point:
    `ngx_http_read_client_request_body` path other modules use — not a
    lower-level filter, and the docs say so.
 
-Where to go next: [How it works](/intro/architecture), or start with
-[Installation on Linux](/install/linux).
+Where to go next: [How it works](/docs/intro/architecture), or start with
+[Installation on Linux](/docs/install/linux).

@@ -100,7 +100,7 @@ Strict RFC 8259-style structure:
 - One document per body: trailing garbage after the top-level value is
   rejected.
 
-Read the [NGINX configuration reference](/configuration/nginx) for every
+Read the [NGINX configuration reference](/docs/configuration/nginx) for every
 directive and default, or head to the
-[engine comparison](/comparison/engines) to see these semantics measured
+[engine comparison](/docs/comparison/engines) to see these semantics measured
 against ModSecurity and Coraza.

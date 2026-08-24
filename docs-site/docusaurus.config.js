@@ -22,7 +22,7 @@ const config = {
       /** @type {import('@docusaurus/preset-classic').Options} */
       {
         docs: {
-          routeBasePath: '/',
+          routeBasePath: '/docs',
           sidebarPath: require.resolve('./sidebars.js'),
         },
         blog: false,
@@ -57,15 +57,16 @@ const config = {
           {
             title: 'Docs',
             items: [
-              { label: 'Why it was built', to: '/' },
-              { label: 'NGINX configuration', to: '/configuration/nginx' },
-              { label: 'Engine comparison', to: '/comparison/engines' },
+              { label: 'Why it was built', to: '/docs/intro/why' },
+              { label: 'NGINX configuration', to: '/docs/configuration/nginx' },
+              { label: 'Engine comparison', to: '/docs/comparison/engines' },
             ],
           },
           {
             title: 'More',
             items: [
-              { label: 'Performance results', to: '/performance/results' },
+              { label: 'Performance results', to: '/docs/performance/results' },
+              { label: 'GitHub', href: 'https://github.com/Vulcanite/ngx_json_guard' },
             ],
           },
         ],

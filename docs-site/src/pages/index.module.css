@@ -1,0 +1,105 @@
+.heroBanner {
+  padding: 3rem 0 3.5rem;
+  text-align: center;
+}
+
+.heroLogo {
+  margin-bottom: 0.75rem;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.35));
+}
+
+.heroSubtitle {
+  font-size: 1.25rem;
+  max-width: 44rem;
+  margin: 0.75rem auto 1.75rem;
+  line-height: 1.55;
+}
+
+.buttons {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.statsSection {
+  padding: 2.5rem 0 0.5rem;
+  border-bottom: 1px solid var(--ifm-toc-border-color);
+}
+
+.statCard {
+  padding: 1rem 0.75rem;
+}
+
+.statValue {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--ifm-color-primary);
+  letter-spacing: -0.02em;
+}
+
+.statLabel {
+  font-size: 0.85rem;
+  color: var(--ifm-color-content-secondary);
+  margin-top: 0.35rem;
+  line-height: 1.4;
+}
+
+.section {
+  padding: 3rem 0;
+}
+
+.sectionAlt {
+  padding: 3rem 0;
+  background: var(--ifm-hover-overlay);
+}
+
+.sectionTitle {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.sectionLead {
+  max-width: 40rem;
+  margin: 1rem auto 0;
+  color: var(--ifm-color-content-secondary);
+  font-size: 1.05rem;
+}
+
+.diagramWrap {
+  margin-top: 2rem;
+}
+
+.featureCard {
+  height: 100%;
+  border: 1px solid var(--ifm-toc-border-color);
+  border-radius: var(--ifm-global-radius);
+  padding: 1.5rem;
+  background: var(--ifm-card-background-color, var(--ifm-background-color));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.featureCard h3 {
+  margin-top: 0;
+}
+
+.featureCard p {
+  margin-bottom: 0;
+  color: var(--ifm-color-content-secondary);
+}
+
+.codeWrap {
+  max-width: 34rem;
+  margin: 1.5rem auto 0;
+}
+
+.codeBlock {
+  border-radius: var(--ifm-global-radius);
+  border: 1px solid var(--ifm-toc-border-color);
+  background: var(--ifm-code-background);
+  padding: 1.25rem;
+  text-align: left;
+  font-size: 0.9rem;
+  margin: 0;
+}

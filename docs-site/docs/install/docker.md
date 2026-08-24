@@ -81,7 +81,7 @@ http {
 ## Benchmark images
 
 Two more images exist for reproducing the
-[benchmark results](/performance/results):
+[benchmark results](/docs/performance/results):
 
 - `ngx_json_guard_api:test` — fixture upstream apps
   (`docker/Dockerfile.api`)

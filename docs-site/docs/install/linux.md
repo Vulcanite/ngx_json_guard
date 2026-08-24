@@ -63,7 +63,7 @@ http {
 Requests to `/api/` with a JSON `Content-Type` now get structural
 validation. Malformed JSON is answered with 400, structural limit
 violations with 413. See the
-[configuration reference](/configuration/nginx) for every directive.
+[configuration reference](/docs/configuration/nginx) for every directive.
 
 ## Verify it works
 
@@ -119,7 +119,7 @@ linear time in body size and flat memory regardless of body size.
 - **Debian/Ubuntu NGINX**: distro packages are built with their own
   module directory (`/usr/lib/nginx/modules`) and specific configure
   flags; match them exactly or rebuild NGINX.
-- **Official NGINX images**: see [Install in Docker](/install/docker) —
+- **Official NGINX images**: see [Install in Docker](/docs/install/docker) —
   the repo ships a Dockerfile that compiles NGINX + the module +
   ModSecurity + CRS in one image.
 - **ABI compatibility** is the recurring gotcha with dynamic modules: if

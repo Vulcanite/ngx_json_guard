@@ -703,3 +703,7 @@ from bundles; their manifest and SHA-256 values are included.
 ## License
 
 Choose and add a license appropriate for your distribution (e.g. BSD-2-Clause, common for NGINX modules). Not specified in this scaffold.
+
+## License
+
+BSD 2-Clause. See [LICENSE](LICENSE).
