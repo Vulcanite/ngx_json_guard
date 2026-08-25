@@ -12,6 +12,8 @@ jobs:
       - name: Parser unit tests
         run: make test
       - name: AddressSanitizer and UBSan
+        env:
+          CC: gcc
         run: make test-asan
       - name: Native harness syntax checks
         run: make native-check
