@@ -39,6 +39,31 @@ export const ENGINE_CLASSES = [
   { label: 'Coraza', value: 6, tone: 'other' },
 ];
 
+/* Processor-only profiles: JSON structure, no CRS. Mixed 1–100 MiB corpus. */
+export const PROCESSOR_P50 = [
+  { label: 'JSON Guard', value: 414, tone: 'guard' },
+  { label: 'ModSecurity\nJSON only', value: 593, tone: 'crs' },
+  { label: 'Coraza\nJSON only', value: 822, tone: 'other' },
+];
+
+export const PROCESSOR_P95 = [
+  { label: 'JSON Guard', value: 2579, tone: 'guard' },
+  { label: 'ModSecurity\nJSON only', value: 6526, tone: 'crs' },
+  { label: 'Coraza\nJSON only', value: 7894, tone: 'other' },
+];
+
+export const PROCESSOR_MIB = [
+  { label: 'JSON Guard', value: 167.2, tone: 'guard' },
+  { label: 'ModSecurity\nJSON only', value: 74.8, tone: 'crs' },
+  { label: 'Coraza\nJSON only', value: 55.7, tone: 'other' },
+];
+
+export const PROCESSOR_CAPTION =
+  'Processor-only profiles (no CRS). Client-observed HTTP latency on the mixed 1–100 MiB corpus, 4 workers. Upload, proxy, and upstream are included for all three — this is not a parser-only timer. Only JSON Guard exposes $json_guard_inspection_us; ModSecurity and Coraza numbers are not fabricated parser times. Guard’s median is helped by early 400/413 on malformed/over-limit bodies in this corpus. Coraza runs on Caddy; the other two run on NGINX.';
+
+export const PROCESSOR_CAPTION_SHORT =
+  'JSON structural validation only — no CRS. HTTP p50 from BENCHMARK.md (2026-08-24), mixed 1–100 MiB corpus.';
+
 const VB_W = 720;
 const VB_H = 320;
 const PAD = { top: 36, right: 28, bottom: 56, left: 58 };
@@ -193,7 +218,7 @@ export function LineChart({
   );
 }
 
-export function BarChart({ title, yLabel, items, yMax, yFormat }) {
+export function BarChart({ title, yLabel, items, yMax, yFormat, caption }) {
   const box = plotBox();
   const fmt = yFormat || ((v) => String(v));
   const n = items.length;
@@ -281,7 +306,11 @@ export function BarChart({ title, yLabel, items, yMax, yFormat }) {
         </text>
       </svg>
       <figcaption className={styles.caption}>
-        Same published values as <code>BENCHMARK.md</code> (2026-08-24).
+        {caption || (
+          <>
+            Same published values as <code>BENCHMARK.md</code> (2026-08-24).
+          </>
+        )}
       </figcaption>
     </figure>
   );

@@ -97,6 +97,22 @@ xychart-beta
     bar [0, 11, 7, 6]
 ```
 
+## 4b. JSON-only time: Guard vs ModSecurity vs Coraza
+
+*Used on: landing, Comparison, Performance.* Processor-only profiles,
+no CRS. Client-observed p50 on the mixed 1–100 MiB corpus.
+
+```mermaid
+xychart-beta
+    title "JSON-only p50 latency (ms, no CRS)"
+    x-axis ["JSON Guard", "ModSecurity JSON", "Coraza JSON"]
+    y-axis "ms" 0 --> 900
+    bar [414, 593, 822]
+```
+
+p95 on the same profiles: 2579 / 6526 / 7894 ms. Throughput: 167.2 /
+74.8 / 55.7 MiB/s.
+
 ## 5. Parser time vs body size
 
 *Used on: Performance results (docs site uses an SVG line with numeric

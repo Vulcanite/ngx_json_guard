@@ -9,6 +9,10 @@ import {
   PARSE_THROUGHPUT,
   GUARD_INSPECT_MS,
   OUTCOME_LATENCY,
+  PROCESSOR_P50,
+  PROCESSOR_P95,
+  PROCESSOR_MIB,
+  PROCESSOR_CAPTION,
 } from '@site/src/components/BenchCharts';
 
 # Performance results
@@ -21,6 +25,43 @@ hardware.
 
 The charts below plot those published values. They do not resample or
 smooth the data.
+
+## JSON structural validation only (no CRS)
+
+This is the head-to-head: JSON Guard vs ModSecurity's JSON processor vs
+Coraza's JSON processor. No CRS, no signatures. Mixed 1–100 MiB corpus,
+4 workers. Details and caveats are on
+[Engine comparison](/docs/comparison/engines).
+
+<BarChart
+  title="JSON-only p50 latency (ms, no CRS)"
+  yLabel="milliseconds"
+  yMax={900}
+  items={PROCESSOR_P50}
+  caption={PROCESSOR_CAPTION}
+/>
+
+<BarChart
+  title="JSON-only p95 latency (ms, no CRS)"
+  yLabel="milliseconds"
+  yMax={8000}
+  items={PROCESSOR_P95}
+  caption={PROCESSOR_CAPTION}
+/>
+
+<BarChart
+  title="JSON-only throughput (MiB/s, no CRS, 4 workers)"
+  yLabel="MiB/s"
+  yMax={180}
+  items={PROCESSOR_MIB}
+  caption={PROCESSOR_CAPTION}
+/>
+
+| Engine | p50 | p95 | MiB/s | Peak RAM |
+|---|---:|---:|---:|---:|
+| JSON Guard | **414 ms** | **2579 ms** | **167.2** | **363 MiB** |
+| ModSecurity JSON only | 593 ms | 6526 ms | 74.8 | 1654 MiB |
+| Coraza JSON only | 822 ms | 7894 ms | 55.7 | 2148 MiB |
 
 ## Parser micro-throughput
 
@@ -87,7 +128,11 @@ ModSecurity-only CRS median** for the same body. The tail-SQLi row is the
 point of the module: CRS still inspects the entire document and blocks
 the attack at the far end.
 
-## Engine throughput (processor suites)
+## Engine throughput (all processor profiles)
+
+Same processor suites as above, including baseline (no JSON validation)
+and Guard+ModSecurity (validated twice). Guard-only still leads because
+the corpus contains bodies it rejects early.
 
 32-request corpus dominated by 1–100 MiB JSON bodies, 4 workers:
 

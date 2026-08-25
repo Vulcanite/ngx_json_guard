@@ -58,12 +58,13 @@ flowchart LR
 ```
 
 The measurements behind this picture are in
-[Performance](/docs/performance/results): the guard's own cost is about
-**3.3% of end-to-end latency** on an accepted 20 MiB body under full CRS
-(and **0.67% of a ModSecurity-only CRS scan** of the same body), roughly
-**10 µs** on a typical small API body — and with the guard in front, CRS
-still catches an SQL injection planted at the tail of a 20 MiB document,
-because the body is never truncated or discarded.
+[Comparison](/docs/comparison/engines) (JSON-only vs ModSecurity vs
+Coraza, no CRS) and [Performance](/docs/performance/results). Processor-only
+p50 on the mixed large-JSON corpus is **414 ms** for the guard, **593 ms**
+for ModSecurity's JSON processor, and **822 ms** for Coraza's. On a typical
+small API body the guard itself is roughly **10 µs**. With the guard in
+front, CRS still catches an SQL injection planted at the tail of a 20 MiB
+document, because the body is never truncated or discarded.
 
 ## What it is not
 
