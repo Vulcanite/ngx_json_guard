@@ -1,19 +1,13 @@
 # Diagram sources (Mermaid)
 
-Single source of truth for every diagram rendered in the documentation
-site (`docs-site/`). Each diagram below is hand-authored Mermaid — no
-AI-diagram service was used to generate or render them. The Docusaurus
-site renders these blocks client-side via `@docusaurus/theme-mermaid`;
-GitHub renders the same blocks natively in this file.
-
-> Note: the original request was to draw these with the Eraser MCP and
-> export as Mermaid. That MCP server is not connected in this
-> environment, so the diagrams were written directly as Mermaid source —
-> which is the same format Eraser exports. If the Eraser MCP becomes
-> available, these sources can be round-tripped through it unchanged.
+Single source of truth for architecture diagrams rendered in the
+documentation site (`docs-site/`). Benchmark *charts* on the docs site
+are SVG (numeric axes, including log-x for inspection time) so body size
+is not plotted as equally spaced categories. Mermaid `xychart-beta` below
+is kept for GitHub rendering of the same published numbers.
 
 Chart data comes exclusively from the 2026-08-24 benchmark runs
-(`BENCHMARK.md`, commit `08851ee`).
+(`BENCHMARK.md`, commit `08851ee`). No values were changed for display.
 
 ---
 
@@ -103,18 +97,20 @@ xychart-beta
     bar [0, 11, 7, 6]
 ```
 
-## 5. Parser throughput by body size
+## 5. Parser time vs body size
 
-*Used on: Performance results.* Median of 15 passes, single thread,
-idle host.
+*Used on: Performance results (docs site uses an SVG line with numeric
+x). Median of 15 passes, single thread, idle host.*
 
 ```mermaid
 xychart-beta
-    title "Parser throughput by body size (MiB/s, single thread)"
+    title "Parser time vs body size (ms, median of 15)"
     x-axis ["100 KiB", "1 MiB", "10 MiB", "20 MiB"]
-    y-axis "MiB/s" 0 --> 300
-    bar [260, 271, 265, 264]
+    y-axis "ms" 0 --> 80
+    line [0.38, 3.7, 37.8, 75.7]
 ```
+
+Throughput over the same points stays flat (260, 271, 265, 264 MiB/s).
 
 ## 6. Guard inspection time by body size
 
@@ -126,7 +122,7 @@ xychart-beta
     title "Guard inspection time by body size (ms, median)"
     x-axis ["~100 B", "1 MiB", "20 MiB"]
     y-axis "milliseconds" 0 --> 100
-    bar [0.01, 4.1, 96.3]
+    line [0.01, 4.1, 96.3]
 ```
 
 ## 7. Large-body throughput by engine
@@ -172,7 +168,7 @@ xychart-beta
   pass-through, purple = walker, amber = body storage).
 - Sequence diagrams: `autonumber`, `alt` lanes for the three validation
   outcomes, `<br/>` for two-line labels to keep frames narrow.
-- Charts: `xychart-beta` bars inherit the active Mermaid theme's text
-  colors (dark text in light mode, light text in dark mode); y-axis
-  maxima are set one round step above the tallest bar so labels never
-  clip.
+- Charts: GitHub still uses `xychart-beta` (bar for categories, line for
+  size series). The docs site plots the same numbers as SVG so the x axis
+  can be proportional (or log) in body size. Y-axis maxima stay one round
+  step above the tallest value so labels never clip.

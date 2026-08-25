@@ -577,8 +577,7 @@ test_huge_generated(void)
     buf[len++] = ']';
 
     jg_limits_set_defaults(&lim);
-    lim.max_total_tokens = 0; /* 0 means no limit? Wait - our code treats 0 as
-                                 "no limit" only if we check > 0. Yes. */
+    lim.max_total_tokens = 0; /* 0 disables the token cap */
     lim.max_array_elements = 0;
     lim.max_object_members = 0;
 

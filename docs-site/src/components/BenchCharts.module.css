@@ -1,0 +1,98 @@
+.wrap {
+  margin: 1.75rem 0 2rem;
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  max-width: 44rem;
+  display: block;
+  margin: 0 auto;
+}
+
+.title {
+  fill: var(--ifm-color-content);
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--ifm-font-family-base);
+}
+
+.tick,
+.pointLabel,
+.axisTitle,
+.caption {
+  font-family: var(--ifm-font-family-base);
+}
+
+.tick {
+  fill: var(--ifm-color-content-secondary);
+  font-size: 11px;
+}
+
+.pointLabel {
+  fill: var(--ifm-color-content);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.axisTitle {
+  fill: var(--ifm-color-content-secondary);
+  font-size: 12px;
+}
+
+.grid {
+  stroke: var(--ifm-color-emphasis-300);
+  stroke-width: 1;
+}
+
+.frame {
+  fill: none;
+  stroke: var(--ifm-color-emphasis-400);
+  stroke-width: 1;
+}
+
+.line {
+  fill: none;
+  stroke: var(--ifm-color-primary);
+  stroke-width: 2.75;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.dot {
+  fill: var(--ifm-color-primary);
+  stroke: var(--ifm-background-color);
+  stroke-width: 2;
+}
+
+.bar_guard {
+  fill: #2e6db5;
+}
+
+.bar_crs {
+  fill: #b96a20;
+}
+
+.bar_block {
+  fill: #c0392b;
+}
+
+.bar_other {
+  fill: #6d4fc4;
+}
+
+.bar_mute {
+  fill: var(--ifm-color-emphasis-400);
+}
+
+.caption {
+  display: block;
+  text-align: center;
+  color: var(--ifm-color-content-secondary);
+  font-size: 0.8rem;
+  margin-top: 0.35rem;
+}
+
+.caption code {
+  font-size: 0.75rem;
+}

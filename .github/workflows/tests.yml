@@ -1,0 +1,17 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  parser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parser unit tests
+        run: make test
+      - name: AddressSanitizer and UBSan
+        run: make test-asan
+      - name: Native harness syntax checks
+        run: make native-check

@@ -1,3 +1,16 @@
+---
+sidebar_position: 0
+---
+
+import {
+  LineChart,
+  BarChart,
+  PARSE_TIME,
+  PARSE_THROUGHPUT,
+  GUARD_INSPECT_MS,
+  OUTCOME_LATENCY,
+} from '@site/src/components/BenchCharts';
+
 # Performance results
 
 All numbers are from the fresh runs of 2026-08-24 (commit `08851ee`),
@@ -5,6 +18,9 @@ WAF containers constrained to 2 vCPU / 4 GiB. Full methodology, raw
 tables, and reproduction steps: `BENCHMARK.md` in the repository root.
 Treat cross-engine *ratios* as the signal — absolute values shift with
 hardware.
+
+The charts below plot those published values. They do not resample or
+smooth the data.
 
 ## Parser micro-throughput
 
@@ -18,16 +34,27 @@ Standalone parser, single thread, median of 15 passes, idle host:
 | 10 MiB | 37.8 ms | 265 MiB/s |
 | 20 MiB | 75.7 ms | 264 MiB/s |
 
-```mermaid
-xychart-beta
-    title "Parser throughput by body size (MiB/s, single thread)"
-    x-axis ["100 KiB", "1 MiB", "10 MiB", "20 MiB"]
-    y-axis "MiB/s" 0 --> 300
-    bar [260, 271, 265, 264]
-```
+<LineChart
+  title="Parser time vs body size (ms, median of 15)"
+  xLabel="Body size"
+  yLabel="milliseconds"
+  points={PARSE_TIME}
+  xMax={20}
+  yMax={80}
+/>
 
-Throughput is flat in body size; memory is flat too — the parser state is
-a fixed ~96 KiB regardless of the document.
+<LineChart
+  title="Parser throughput vs body size (MiB/s, single thread)"
+  xLabel="Body size"
+  yLabel="MiB/s"
+  points={PARSE_THROUGHPUT}
+  xMax={20}
+  yMax={300}
+/>
+
+Time grows linearly with body size; throughput stays flat around
+260–271 MiB/s. Memory is flat too — the parser state is a fixed ~96 KiB
+regardless of the document.
 
 ## What the guard adds per request
 
@@ -42,30 +69,40 @@ Guard + ModSecurity + full CRS, 4 workers, 175/175 correct outcomes.
 | 20 MiB clean JSON | 96.3 ms | 2920 ms | 3.3% |
 | 20 MiB, SQLi at tail (403 by CRS) | 82.9 ms | 2031 ms | 4.1% |
 
-```mermaid
-xychart-beta
-    title "Guard inspection time by body size (ms, median)"
-    x-axis ["~100 B", "1 MiB", "20 MiB"]
-    y-axis "milliseconds" 0 --> 100
-    bar [0.01, 4.1, 96.3]
-```
+<LineChart
+  title="Guard inspection time vs body size (ms, median)"
+  xLabel="Body size (log scale)"
+  yLabel="milliseconds"
+  points={GUARD_INSPECT_MS}
+  xMax={20}
+  xMin={0.0001}
+  xScale="log"
+  yMax={100}
+/>
 
-On an accepted 20 MiB body under full CRS, the guard's timer reports
-**75.2 ms median — 0.67%** of the ModSecurity-only latency for the same
-body. The tail-SQLi row is the point of the module: CRS still inspects
-the entire document and blocks the attack at the far end.
+On an accepted 20 MiB body under full CRS, the guard's timer is **96.3 ms
+p50 — 3.3% of end-to-end latency** (2920 ms). A separate single-worker
+cross-WAF measurement reports **75.2 ms median, 0.67% of the
+ModSecurity-only CRS median** for the same body. The tail-SQLi row is the
+point of the module: CRS still inspects the entire document and blocks
+the attack at the far end.
 
 ## Engine throughput (processor suites)
 
 32-request corpus dominated by 1–100 MiB JSON bodies, 4 workers:
 
-```mermaid
-xychart-beta
-    title "Large-body throughput by engine (MiB/s, 4 workers)"
-    x-axis ["Baseline", "Guard only", "ModSecurity", "Guard+ModSecurity", "Coraza"]
-    y-axis "MiB/s" 0 --> 180
-    bar [127.2, 167.2, 74.8, 105.8, 55.7]
-```
+<BarChart
+  title="Large-body throughput by engine (MiB/s, 4 workers)"
+  yLabel="MiB/s"
+  yMax={180}
+  items={[
+    { label: 'Baseline', value: 127.2, tone: 'mute' },
+    { label: 'Guard only', value: 167.2, tone: 'guard' },
+    { label: 'ModSecurity', value: 74.8, tone: 'crs' },
+    { label: 'Guard+\nModSecurity', value: 105.8, tone: 'guard' },
+    { label: 'Coraza', value: 55.7, tone: 'other' },
+  ]}
+/>
 
 The guard-only bar sits *above* baseline because this corpus contains
 malformed and over-limit bodies that the guard rejects early — baseline
@@ -75,7 +112,16 @@ guard+ModSecurity beating ModSecurity alone (105.8 vs 74.8 MiB/s).
 
 ## Early rejection economics
 
-20 MiB bodies, median latency by outcome:
+20 MiB bodies, median latency by outcome — this is the effectiveness
+picture: structural rejects are about **10× cheaper** than a full CRS
+scan.
+
+<BarChart
+  title="20 MiB body: latency by outcome (ms, median)"
+  yLabel="milliseconds"
+  yMax={3000}
+  items={OUTCOME_LATENCY}
+/>
 
 | Case | Outcome | Latency |
 |---|---|---:|
@@ -84,16 +130,7 @@ guard+ModSecurity beating ModSecurity alone (105.8 vs 74.8 MiB/s).
 | Token/cardinality over limit | 413 by guard | 241 ms (guard portion 3.5 ms) |
 | SQLi at tail | 403 by CRS | 2031 ms |
 
-```mermaid
-xychart-beta
-    title "20 MiB body: latency by outcome (ms, median)"
-    x-axis ["Accepted (CRS scans)", "Tail SQLi (CRS blocks)", "Malformed tail (guard 400)", "Over limit (guard 413)"]
-    y-axis "milliseconds" 0 --> 3000
-    bar [2920, 2031, 313, 241]
-```
-
-The structural rejects are roughly **10x cheaper** than a full CRS scan —
-that is the budget the guard spends on every accepted body (about 3–5%)
+That is the budget the guard spends on every accepted body (about 3–5%)
 and saves on every rejected one.
 
 ## Reproduce

@@ -4,7 +4,7 @@ module.exports = {
     {
       type: 'category',
       label: 'Getting started',
-      items: ['intro/why', 'intro/architecture'],
+      items: ['intro/why', 'intro/architecture', 'intro/limits'],
     },
     {
       type: 'category',

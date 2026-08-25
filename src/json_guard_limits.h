@@ -10,7 +10,11 @@
 
 #include <stddef.h>
 
-/* Default structural limits (also used by the NGINX module). */
+/*
+ * Default structural limits (also used by the NGINX module).
+ * For length/token/width fields, 0 means unlimited. max_depth 0 is clamped
+ * to JG_STACK_MAX_DEPTH at parser init (it is not unlimited).
+ */
 #define JG_DEFAULT_MAX_DEPTH            100
 #define JG_DEFAULT_MAX_KEY_LENGTH       4096
 #define JG_DEFAULT_MAX_STRING_LENGTH    1048576   /* 1 MiB */

@@ -6,6 +6,7 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 import Mermaid from '@theme/Mermaid';
 import Layout from '@theme/Layout';
 
+import { BarChart, OUTCOME_LATENCY } from '@site/src/components/BenchCharts';
 import styles from './index.module.css';
 
 const ARCH_DIAGRAM = `flowchart LR
@@ -25,7 +26,7 @@ const ARCH_DIAGRAM = `flowchart LR
     style X3 fill:#c0392b,stroke:#7d241a,color:#ffffff`;
 
 const STATS = [
-  { value: '0.67%', label: 'added latency on an accepted 20 MiB body under full CRS' },
+  { value: '3.3%', label: 'of end-to-end latency on an accepted 20 MiB body under full CRS' },
   { value: '~10 µs', label: 'guard cost on a typical small JSON body' },
   { value: '260 MiB/s', label: 'single-threaded streaming parse throughput' },
   { value: '11 / 11', label: 'structural violation classes rejected (ModSecurity: 7, Coraza: 6)' },
@@ -159,6 +160,25 @@ export default function Home() {
         <section className={styles.sectionAlt}>
           <div className="container">
             <h2 className={clsx('text--center', styles.sectionTitle)}>
+              Effectiveness on a 20 MiB body
+            </h2>
+            <p className={clsx('text--center', styles.sectionLead)}>
+              Same published medians as the benchmark run — a malformed or
+              over-limit body is rejected about 10× cheaper than a full CRS
+              scan. Clean traffic still gets full inspection.
+            </p>
+            <BarChart
+              title="20 MiB body: latency by outcome (ms, median)"
+              yLabel="milliseconds"
+              yMax={3000}
+              items={OUTCOME_LATENCY}
+            />
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <div className="container">
+            <h2 className={clsx('text--center', styles.sectionTitle)}>
               What you get
             </h2>
             <div className="row" style={{ marginTop: '2rem' }}>
@@ -174,7 +194,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={styles.section}>
+        <section className={styles.sectionAlt}>
           <div className="container text--center">
             <h2 className={styles.sectionTitle}>Quick start</h2>
             <div className={styles.codeWrap}>

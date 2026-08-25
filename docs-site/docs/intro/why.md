@@ -19,7 +19,7 @@ ModSecurity and the OWASP Core Rule Set, you have three bad options:
    every oversized body now stresses the rule engine: deeply nested or
    pathological JSON can burn CPU in the parser before rules even run, and
    malformed bodies waste a full scan.
-2. **Enable partial processing (`ProcessPartialLimit`).** You cap the
+2. **Enable partial processing (`SecRequestBodyLimitAction ProcessPartial`).** You cap the
    inspected prefix and simply never see attacks planted past the cutoff.
    An SQL injection in the last kilobyte of a 20 MiB document sails
    through uninspected.
@@ -59,7 +59,8 @@ flowchart LR
 
 The measurements behind this picture are in
 [Performance](/docs/performance/results): the guard's own cost is about
-**0.67% of a full CRS scan** on an accepted 20 MiB body, roughly
+**3.3% of end-to-end latency** on an accepted 20 MiB body under full CRS
+(and **0.67% of a ModSecurity-only CRS scan** of the same body), roughly
 **10 µs** on a typical small API body — and with the guard in front, CRS
 still catches an SQL injection planted at the tail of a 20 MiB document,
 because the body is never truncated or discarded.

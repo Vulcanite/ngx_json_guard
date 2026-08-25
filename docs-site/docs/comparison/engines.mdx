@@ -1,3 +1,5 @@
+import { BarChart, ENGINE_CLASSES } from '@site/src/components/BenchCharts';
+
 # Engine comparison: structural validation
 
 Four engines were run against the same 51-case structural corpus on the
@@ -42,13 +44,12 @@ a nutshell: it validates nothing itself.
 fixed internal parser limits*, which you cannot configure. The guard's
 thresholds are directives in `nginx.conf`.
 
-```mermaid
-xychart-beta
-    title "Structural violation classes rejected at the edge (of 11)"
-    x-axis ["Baseline", "JSON Guard", "ModSecurity", "Coraza"]
-    y-axis "Classes rejected" 0 --> 11
-    bar [0, 11, 7, 6]
-```
+<BarChart
+  title="Structural violation classes rejected at the edge (of 11)"
+  yLabel="Classes rejected"
+  yMax={11}
+  items={ENGINE_CLASSES}
+/>
 
 Three takeaways:
 

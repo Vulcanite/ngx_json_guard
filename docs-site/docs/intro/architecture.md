@@ -81,11 +81,14 @@ flowchart TB
     style B2 fill:#b98f1f,stroke:#7a5f13,color:#ffffff
 ```
 
-Nesting beyond the internal hard ceiling (1024) is clamped at
-configuration time — a `json_guard_max_depth 100000` directive cannot
-overflow the fixed stack; it is capped to the ceiling. Duplicate-key
-detection, when enabled, uses a fixed-capacity fingerprint table and fails
-closed (rejects) if the table is exceeded.
+Nesting beyond the internal hard ceiling (1024) is clamped when the
+parser is initialized — a `json_guard_max_depth 100000` directive cannot
+overflow the fixed stack. Duplicate-key detection, when enabled, uses a
+fixed-capacity fingerprint table and fails closed (rejects) if the table
+is exceeded.
+
+Operator caveats (compressed bodies, empty JSON-typed requests, module
+order) are collected under [Limits and caveats](/docs/intro/limits).
 
 ## Validation semantics
 

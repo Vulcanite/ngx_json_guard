@@ -29,6 +29,7 @@ them into a separate `location` with `json_guard off`. A
 |---|---|
 | Malformed JSON (syntax, escapes, UTF-8, trailing garbage) | 400 |
 | Structural limit exceeded (depth, lengths, tokens, widths) | 413 |
+| Internal error (temp-file I/O, allocator, parser failure) | 500 |
 
 Rejections happen at the edge: the body is not proxied and ModSecurity
 never scans it.
@@ -48,10 +49,12 @@ never scans it.
 | `json_guard_allow_top_level_scalar` | `off` | Permit a top-level `true` / `false` / `null` / number / string |
 | `json_guard_reject_duplicate_keys` | `off` | Reject objects with duplicate keys (bounded fingerprint table, fails closed) |
 
-A value of `0` for a numeric limit means **unlimited**. Limits are
-enforced while streaming, so an over-limit body is rejected as soon as the
-violation is seen — a `tokens_100001` rejection fires ~3.5 ms into the
-stream, not after the whole body arrives.
+A value of `0` for length, token, and width limits means **unlimited**.
+`json_guard_max_depth 0` is **not** unlimited: it is clamped to the
+internal ceiling of 1024, the same as any configured value above 1024.
+Limits are enforced while streaming, so an over-limit body is rejected as
+soon as the violation is seen — a `tokens_100001` rejection fires ~3.5 ms
+into the stream, not after the whole body arrives.
 
 ## Inspection timer variable
 

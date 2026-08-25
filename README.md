@@ -219,13 +219,13 @@ make install
 | Directive | Default | Description |
 |-----------|---------|-------------|
 | `json_guard` | `off` | Enable structural validation in this location/server |
-| `json_guard_max_depth` | `100` | Max nesting depth |
+| `json_guard_max_depth` | `100` | Max nesting depth (hard ceiling 1024; `0` and larger values are clamped) |
 | `json_guard_max_key_length` | `4096` | Max decoded Unicode scalar values in an object key |
 | `json_guard_max_string_length` | `1048576` | Max decoded Unicode scalar values in a string value |
 | `json_guard_max_number_length` | `256` | Max number token length |
-| `json_guard_max_total_tokens` | `10000000` | Max structural/scalar tokens |
-| `json_guard_max_object_members` | `1000000` | Max members per object |
-| `json_guard_max_array_elements` | `1000000` | Max elements per array |
+| `json_guard_max_total_tokens` | `10000000` | Max structural/scalar tokens (`0` = unlimited) |
+| `json_guard_max_object_members` | `1000000` | Max members per object (`0` = unlimited) |
+| `json_guard_max_array_elements` | `1000000` | Max elements per array (`0` = unlimited) |
 | `json_guard_allow_top_level_scalar` | `off` | Allow top-level `true`/`false`/`null`/number/string |
 | `json_guard_reject_duplicate_keys` | `off` | Optional bounded duplicate-key rejection |
 
@@ -694,15 +694,12 @@ from bundles; their manifest and SHA-256 values are included.
 
 ## Future work / TODOs
 
+- [ ] Optional `json_guard_methods` to skip GET/HEAD (or other methods) in mixed locations.
 - [ ] Event-driven temp-file reads if needed under extreme load.
 - [ ] NDJSON mode (optional).
 - [ ] Metrics counters (accepted/rejected/malformed/limit via stub_status or Prometheus).
 
 ---
-
-## License
-
-Choose and add a license appropriate for your distribution (e.g. BSD-2-Clause, common for NGINX modules). Not specified in this scaffold.
 
 ## License
 
