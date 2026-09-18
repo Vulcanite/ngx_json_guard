@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  NGINX_VERSION: "1.30.4"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential curl ca-certificates \
+            libpcre3-dev libpcre2-dev zlib1g-dev
+
+      - name: Fetch NGINX ${{ env.NGINX_VERSION }} source
+        run: |
+          curl -fsSL -o /tmp/nginx-${NGINX_VERSION}.tar.gz \
+            "https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz"
+          tar -xzf /tmp/nginx-${NGINX_VERSION}.tar.gz -C /tmp
+
+      - name: Configure and build dynamic module
+        run: |
+          cd "/tmp/nginx-${NGINX_VERSION}"
+          ./configure --with-compat --add-dynamic-module="${GITHUB_WORKSPACE}"
+          make modules
+          test -f objs/ngx_http_json_guard_module.so
+          ls -l objs/ngx_http_json_guard_module.so
+
+      - name: Parser unit tests
+        run: make test
+
+      - name: Parser tests with ASan and UBSan
+        run: make test-asan
