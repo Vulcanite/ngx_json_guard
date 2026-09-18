@@ -52,6 +52,8 @@ http {
             json_guard_allow_top_level_scalar off;
             # Optional bounded fingerprint-based duplicate-key rejection.
             # json_guard_reject_duplicate_keys on;
+            # Default methods: POST PUT PATCH. Empty bodies are passed through.
+            # json_guard_methods POST PUT PATCH;
 
             proxy_pass http://backend;
             proxy_http_version 1.1;

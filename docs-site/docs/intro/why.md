@@ -81,8 +81,9 @@ This module is deliberately narrow, and the boundaries are the point:
 1. **Streaming first.** The parser is a finite state machine with an
    explicit container stack — no recursion, chunks may split anywhere
    (inside escapes, UTF-8 sequences, surrogate pairs).
-2. **Bounded memory, always.** A fixed-size parser state (~96 KiB) covers
-   the whole request regardless of body size; huge bodies are walked in
+2. **Bounded memory, always.** A 16,600-byte parser object covers the
+   whole request regardless of body size (plus a 40 KiB duplicate-key
+   table only when that feature is on); huge bodies are walked in
    64 KiB chunks over NGINX buffers or temp files.
 3. **Fail closed on structure, silent on content.** Strict RFC 8259
    semantics: trailing commas, bad escapes, invalid UTF-8, unpaired

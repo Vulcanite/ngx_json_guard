@@ -12,15 +12,14 @@ json_guard on;
 
 When enabled in a location, requests whose `Content-Type` is
 `application/json` (any `+json` suffix, case-insensitive, with
-parameters such as `charset` tolerated) are validated **regardless of
-HTTP method** — a `GET` carrying a JSON body is validated too.
+parameters such as `charset` tolerated) are validated for methods listed
+in `json_guard_methods` (default `POST PUT PATCH`).
 
 :::note Empty bodies
-A request with a JSON content type and **no body** (for example a `GET`
-with `Content-Type: application/json`) fails validation and is answered
-with **400**. If you serve such requests through the same location, gate
-them into a separate `location` with `json_guard off`. A
-`json_guard_methods` directive is on the roadmap.
+A request with a JSON content type and **no body** (`Content-Length: 0`,
+or a method that carries no entity) is passed through without parsing.
+GET/HEAD/DELETE/OPTIONS are skipped by default; add them to
+`json_guard_methods` if you need those verbs guarded.
 :::
 
 ## Response codes
@@ -46,7 +45,8 @@ never scans it.
 | `json_guard_max_object_members` | `1000000` | Maximum members per object |
 | `json_guard_max_array_elements` | `1000000` | Maximum elements per array |
 | `json_guard_allow_top_level_scalar` | `off` | Permit a top-level `true` / `false` / `null` / number / string |
-| `json_guard_reject_duplicate_keys` | `off` | Reject objects with duplicate keys (bounded fingerprint table, fails closed) |
+| `json_guard_reject_duplicate_keys` | `off` | Reject objects with duplicate keys (1024-slot table, allocated only when on; `JG_REJECT_DUP_TABLE` if full) |
+| `json_guard_methods` | `POST PUT PATCH` | HTTP methods that are validated |
 
 A value of `0` for a numeric limit means **unlimited**. Limits are
 enforced while streaming, so an over-limit body is rejected as soon as the

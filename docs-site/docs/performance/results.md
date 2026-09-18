@@ -27,7 +27,8 @@ xychart-beta
 ```
 
 Throughput is flat in body size; memory is flat too — the parser state is
-a fixed ~96 KiB regardless of the document.
+a 16,600-byte control block regardless of the document (40 KiB extra only
+when duplicate-key rejection is enabled).
 
 ## What the guard adds per request
 

@@ -75,7 +75,7 @@ sequenceDiagram
 ```mermaid
 flowchart TB
     subgraph per_request["Per request (pool-allocated)"]
-        S["jg_parser_t — fixed ~96 KiB<br/>container stack ≤1024 · limits · counters"]
+        S["jg_parser_t — 16,600 B control block<br/>container stack ≤1024 · limits · counters"]
     end
     subgraph body["Body storage (NGINX-owned)"]
         B1["r->request_body bufs<br/>memory chain"] --> W

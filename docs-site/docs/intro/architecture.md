@@ -66,7 +66,7 @@ response is the guard's 400, not a ModSecurity response.
 ```mermaid
 flowchart TB
     subgraph per_request["Per request (pool-allocated)"]
-        S["jg_parser_t — fixed ~96 KiB<br/>container stack ≤1024 · limits · counters"]
+        S["jg_parser_t — 16,600 B control block<br/>container stack ≤1024 · limits · counters"]
     end
     subgraph body["Body storage (NGINX-owned)"]
         B1["r->request_body bufs<br/>memory chain"] --> W
@@ -84,8 +84,9 @@ flowchart TB
 Nesting beyond the internal hard ceiling (1024) is clamped at
 configuration time — a `json_guard_max_depth 100000` directive cannot
 overflow the fixed stack; it is capped to the ceiling. Duplicate-key
-detection, when enabled, uses a fixed-capacity fingerprint table and fails
-closed (rejects) if the table is exceeded.
+detection, when enabled, uses a 1024-slot fingerprint table allocated
+only for that request and fails closed with `JG_REJECT_DUP_TABLE` if the
+table is exceeded.
 
 ## Validation semantics
 

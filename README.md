@@ -24,11 +24,11 @@
 
 Large JSON request bodies are awkward for WAF deployments:
 
-- Operators raise or disable body limits and risk memory pressure.
+- Operators raise `SecRequestBodyLimit` and let ModSecurity parse pathological structure on every request.
 - Operators use `ProcessPartial` / truncation and miss attacks in the uninspected tail.
-- Deeply nested or huge-string JSON can stress parsers before rules even run.
+- Deeply nested or huge-string JSON can stress WAF parsers before rules even run.
 
-`ngx_json_guard` addresses the structural risk layer: validate JSON structure and limits before upstream handling, then let ModSecurity/CRS do full content inspection on bodies that are at least well-formed and within configured shape limits.
+`ngx_json_guard` does **not** change NGINX's body-buffering behavior and does **not** relieve NGINX memory pressure: it runs *after* NGINX has already buffered or spooled the entire body. What it does is reject malformed or structurally abusive JSON before ModSecurity and the upstream app spend CPU on it, so you can keep full CRS inspection instead of truncating.
 
 ---
 
@@ -78,7 +78,7 @@ upstream application
 
 ### Request lifecycle (ModSecurity compatibility)
 
-1. **PREACCESS** handler runs for a main request when `json_guard on` and `Content-Type` is JSON, regardless of HTTP method.
+1. **PREACCESS** handler runs for a main request when `json_guard on`, `Content-Type` is JSON, and the method is in `json_guard_methods` (default `POST PUT PATCH`). Empty bodies (`Content-Length: 0` / no body) are passed through.
 2. Module calls `ngx_http_read_client_request_body()` — the **same** NGINX body path used by other modules.
 3. Post-body handler feeds `r->request_body` chains (and temp files) into the streaming parser in bounded chunks.
 4. On success: module returns `NGX_DECLINED`; **body remains in `r->request_body`**.
@@ -98,6 +98,7 @@ This is not live validation while upload bytes arrive from the client. Until a b
 ```
 ngx_json_guard/
   README.md
+  ROADMAP.md
   Makefile
   config                              # NGINX dynamic/static module build
   ngx_http_json_guard_module.c        # NGINX HTTP module
@@ -133,6 +134,7 @@ ngx_json_guard/
     echo_backend.py                   # Upstream body-preservation probe
     run_integration_tests.sh
   benchmark/
+    fixtures/                         # Small committed samples for micro-benchmarks
     docker-compose.yml                # Shared APIs plus switchable WAF targets
     engines.json                      # Eight benchmark engine descriptors
     Dockerfile.coraza                 # Pinned official Coraza/Caddy connector
@@ -227,7 +229,8 @@ make install
 | `json_guard_max_object_members` | `1000000` | Max members per object |
 | `json_guard_max_array_elements` | `1000000` | Max elements per array |
 | `json_guard_allow_top_level_scalar` | `off` | Allow top-level `true`/`false`/`null`/number/string |
-| `json_guard_reject_duplicate_keys` | `off` | Optional bounded duplicate-key rejection |
+| `json_guard_reject_duplicate_keys` | `off` | Optional bounded duplicate-key rejection (1024-key table; extra 40 KiB allocated only when on) |
+| `json_guard_methods` | `POST PUT PATCH` | HTTP methods that are validated; others skip the guard |
 
 ### Inspection timing
 
@@ -249,7 +252,7 @@ Validation runs only for:
 - `application/*+json`
 - Parameterized forms such as `application/json; charset=utf-8`
 
-Skipped for multipart, urlencoded, text/plain, missing Content-Type, and subrequests. Method does not affect selection: DELETE, custom methods, and other requests with a JSON Content-Type are validated too. A JSON-typed request with no body is rejected as empty JSON.
+Skipped for multipart, urlencoded, text/plain, missing Content-Type, subrequests, and HTTP methods outside `json_guard_methods` (default `POST PUT PATCH`, so GET/HEAD/DELETE/OPTIONS are skipped). A JSON-typed request with no body or `Content-Length: 0` is passed through without parsing.
 
 ### Return codes
 
@@ -320,7 +323,8 @@ SecRequestBodyJsonDepthLimit 100
 - Treat this as a **guard layer**, not a security boundary by itself.
 - Always keep ModSecurity (or equivalent) enabled for JSON APIs that need attack detection.
 - Tune limits to your API schema; defaults are intentionally generous for large bodies.
-- Empty JSON bodies with `Content-Type: application/json` are rejected as incomplete/malformed.
+- Empty JSON bodies with `Content-Type: application/json` are passed through (`Content-Length: 0` / no body). The standalone parser still treats empty input as malformed; the module skips it.
+- Validation applies to `json_guard_methods` (default `POST PUT PATCH`).
 - Top-level scalars are rejected by default (`json_guard_allow_top_level_scalar off`).
 - Duplicate-key rejection is optional and disabled by default.
 - `\u` escapes are validated, including rejection of unpaired UTF-16 surrogate escapes.
@@ -334,7 +338,7 @@ SecRequestBodyJsonDepthLimit 100
 ## Known limitations
 
 - Validates structure only; does **not** canonicalize JSON for ModSecurity.
-- Duplicate-key rejection uses a fixed fingerprint table, not full key storage. It is bounded and fail-closed if the table fills; extremely unlikely fingerprint collisions are rejected as duplicates.
+- Duplicate-key rejection uses a 1024-slot fingerprint table allocated only when the feature is on, not full key storage. It is bounded and fail-closed (`JG_REJECT_DUP_TABLE`) if the table fills; extremely unlikely fingerprint collisions are rejected as duplicates. Raising the cap is not supported.
 - Compressed bodies (`Content-Encoding`) are not supported unless decompressed before this module.
 - NDJSON / JSON Lines is not supported in v1.
 - Multipart bodies are not validated (skipped).
@@ -353,10 +357,13 @@ typedef enum {
     JG_NEED_MORE,
     JG_REJECT_MALFORMED,
     JG_REJECT_LIMIT,
+    JG_REJECT_DUP_TABLE,
     JG_INTERNAL_ERROR
 } jg_result_t;
 
+/* parser must already be zeroed (ngx_pcalloc, calloc, or memset) */
 void jg_parser_init(jg_parser_t *parser, const jg_limits_t *limits);
+void jg_parser_set_dup_key_table(jg_parser_t *parser, jg_dup_key_slot_t *table);
 jg_result_t jg_parser_feed(jg_parser_t *parser,
                            const unsigned char *data, size_t len);
 jg_result_t jg_parser_finish(jg_parser_t *parser);
@@ -394,7 +401,7 @@ What the suite proves:
 | 7 | Excessive nesting | **413** | Structural limit |
 | 8 | `/noguard/` malformed | 200 | Contrast path without guard |
 | 9 | Duplicate object key | **400** | Optional duplicate-key rejection enabled in Docker config |
-| 10 | Malformed DELETE JSON | **400** | JSON validation is independent of HTTP method |
+| 10 | GET JSON / empty POST / DELETE | not 400 | Default `json_guard_methods` is POST PUT PATCH; empty bodies pass |
 | 11 | Two requests on one connection | 200, 200 | Body-read reference is released for keep-alive reuse |
 | 12 | Mixed-case `*+json` with OWS | 200 | Case-insensitive media-type matching and trimming |
 

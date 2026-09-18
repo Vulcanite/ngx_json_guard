@@ -97,8 +97,12 @@ Generated corpora (`scripts/gen_large_json.py`), idle host, single thread:
 
 Throughput is roughly flat in body size and varies with token density.
 Peak RSS of the benchmark process is 1.9 MiB; the parser itself uses a
-fixed-size ~96 KiB state struct — validation memory does not grow with
-body size.
+fixed-size **16,600-byte** control block (20 KiB `JG_PARSER_SIZE` bound).
+A 40 KiB duplicate-key table is allocated only when
+`json_guard_reject_duplicate_keys` is on. Validation memory does not grow
+with body size. (Earlier docs said "~96 KiB"; that overstated the old
+57,552-byte struct, which was itself dominated by an always-present
+`dup_keys` table.)
 
 ## 2. Per-request guard cost
 
@@ -113,6 +117,18 @@ time; "Total p50" is the client-observed end-to-end latency.
 | 1 MiB clean JSON | 4.1 ms | 77.3 ms | 5.3% |
 | 20 MiB clean JSON | 96.3 ms | 2920 ms | 3.3% |
 | 20 MiB SQLi at document tail | 82.9 ms | 2031 ms (403) | 4.1% |
+
+The 0.01 ms small-body guard times above were measured when every request
+zeroed a 57,552-byte parser twice (`ngx_pcalloc` then `memset`). That
+double zero is gone: the control block is 16,600 bytes and `jg_parser_init`
+no longer memset()s it. Re-run `make waf-perf` for updated NGINX-side
+small-body numbers; standalone parser cost for the committed
+`benchmark/fixtures/small_object.json` is in the reproducing section.
+
+The tables report p50 from the 2026-08-24 runs. The harness now also
+emits **p99**. `make waf-high-concurrency` (32 workers, JSON-only) exists
+to expose worker stalls from blocking temp-file reads — serial p50 hides
+that cost.
 
 The accepted 20 MiB tail-SQLi row is the core claim: the guard costs ~83 ms
 and CRS still inspects the *entire* body — the attack at the far end of a
@@ -225,12 +241,24 @@ and its SHA-256 at the upstream matches.
 
 ## Reproducing
 
+Parser-only numbers do not need `artifacts/` (2.8 GB of local run output,
+gitignored). Generators and a small committed fixture live in-tree:
+
 ```sh
-make test                        # parser unit tests (75)
+make test                        # parser unit tests
+python3 scripts/gen_bench_fixtures.py   # small_object + 0.1/1 MiB into /tmp/jg-fixtures
+make tests/bench_json_guard_repeat
+./tests/bench_json_guard_repeat benchmark/fixtures/small_object.json 15
 make bench-micro                 # §1 numbers, ~1 min, run on idle host
+```
+
+End-to-end WAF numbers still need Docker:
+
+```sh
 make cross-waf-full              # §3, all 8 engines, ~90 min + image build
 make waf-correctness             # §4 serial run, ~5 min
-make waf-perf                    # §2 mixed run, ~10 min
+make waf-perf                    # §2 mixed run, ~10 min (now includes p99)
+make waf-high-concurrency        # JSON-only, 32 workers; p99 of blocking reads
 ```
 
 Prerequisites: Docker with Compose, ~10 GiB free disk for images and
