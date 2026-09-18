@@ -11,8 +11,6 @@
 
 #include "json_guard_parser.h"
 
-#include <string.h>
-
 #define JG_KEY_HASH1_INIT  1469598103934665603ULL
 #define JG_KEY_HASH1_PRIME 1099511628211ULL
 #define JG_KEY_HASH2_INIT  0x9E3779B97F4A7C15ULL
@@ -556,7 +554,7 @@ jg_parser_init(jg_parser_t *parser, const jg_limits_t *limits)
         return;
     }
 
-    memset(parser, 0, sizeof(*parser));
+    /* Caller zeroed the object (see jg_parser_init contract in the header). */
 
     if (limits != NULL) {
         parser->limits = *limits;

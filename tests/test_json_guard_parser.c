@@ -91,6 +91,17 @@ expect_result(const char *name, jg_result_t got, jg_result_t want,
     g_failed++;
 }
 
+/*
+ * Stack parsers are uninitialized; jg_parser_init() no longer memset()s
+ * because the NGINX module already ngx_pcalloc()s the request context.
+ */
+static void
+init_parser(jg_parser_t *p, const jg_limits_t *limits)
+{
+    memset(p, 0, sizeof(*p));
+    jg_parser_init(p, limits);
+}
+
 static jg_result_t
 parse_all(jg_parser_t *p, const unsigned char *data, size_t len)
 {
@@ -149,7 +160,7 @@ test_valid_small(void)
     const char *json = "{\"hello\":\"world\",\"n\":42,\"ok\":true,\"z\":null}";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("1. valid small object", r, JG_OK, p.error, JG_ERR_NONE);
 }
@@ -161,7 +172,7 @@ test_valid_top_level_array(void)
     const char *json = "[1,2,3,{\"k\":\"v\"},true,null,\"x\"]";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("2. valid top-level array", r, JG_OK, p.error, JG_ERR_NONE);
 }
@@ -173,7 +184,7 @@ test_valid_nested(void)
     const char *json = "{\"a\":{\"b\":[{\"c\":1},2],\"d\":false}}";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("3. valid nested object", r, JG_OK, p.error, JG_ERR_NONE);
 }
@@ -185,7 +196,7 @@ test_fragmented_bytewise(void)
     const char *json = "{\"a\":[1,2,{\"b\":\"c\\n\\u0041\"}],\"x\":false}";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_byte_at_a_time(&p, (const unsigned char *)json, strlen(json));
     expect_result("4. fragmented one-byte-at-a-time", r, JG_OK,
                   p.error, JG_ERR_NONE);
@@ -199,7 +210,7 @@ test_string_split(void)
     const char *b = "lo world\"}";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = jg_parser_feed(&p, (const unsigned char *)a, strlen(a));
     if (r != JG_NEED_MORE && r != JG_OK) {
         expect_result("5. string split across chunks", r, JG_OK,
@@ -226,7 +237,7 @@ test_escape_split(void)
     const unsigned char c2[] = {'n', 'y', '"', '}'};
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = jg_parser_feed(&p, c1, sizeof(c1));
     if (r != JG_NEED_MORE && r != JG_OK) {
         expect_result("6. escape sequence split", r, JG_OK, p.error, JG_ERR_NONE);
@@ -250,7 +261,7 @@ test_unicode_escape_split(void)
     const unsigned char c2[] = {'4', '1', '"', '}'};
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = jg_parser_feed(&p, c1, sizeof(c1));
     if (r != JG_NEED_MORE && r != JG_OK) {
         expect_result("7. unicode escape split", r, JG_OK, p.error, JG_ERR_NONE);
@@ -272,12 +283,12 @@ test_trailing_comma(void)
     const char *json = "{\"a\":1,}";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("8. invalid trailing comma", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_UNEXPECTED_TOKEN);
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)"[1,]", 4);
     expect_result("8b. invalid array trailing comma", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_INVALID_CHAR);
@@ -290,7 +301,7 @@ test_invalid_escape(void)
     const char *json = "{\"a\":\"\\q\"}";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("9. invalid escape", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_INVALID_ESCAPE);
@@ -303,7 +314,7 @@ test_invalid_unicode(void)
     const char *json = "{\"a\":\"\\u12XG\"}";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("10. invalid unicode escape", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_INVALID_UNICODE_ESCAPE);
@@ -316,7 +327,7 @@ test_unterminated_string(void)
     const char *json = "{\"a\":\"hello";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("11. unterminated string", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_UNTERMINATED_STRING);
@@ -332,22 +343,22 @@ test_invalid_number(void)
     jg_limits_set_defaults(&lim);
     lim.allow_top_level_scalar = 1;
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)"01", 2);
     expect_result("12. invalid number leading zero", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_TRAILING_GARBAGE);
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)"1.", 2);
     expect_result("12b. invalid number trailing dot", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_INVALID_NUMBER);
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)"-", 1);
     expect_result("12c. invalid number lone minus", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_INVALID_NUMBER);
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)"{\"n\":1e}", 8);
     expect_result("12d. invalid number bare exponent", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_INVALID_NUMBER);
@@ -360,7 +371,7 @@ test_trailing_garbage(void)
     const char *json = "{\"a\":1} garbage";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("13. trailing garbage", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_TRAILING_GARBAGE);
@@ -377,7 +388,7 @@ test_depth_limit(void)
     jg_limits_set_defaults(&lim);
     lim.max_depth = 2;
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("14. too much nesting", r, JG_REJECT_LIMIT,
                   p.error, JG_ERR_DEPTH_LIMIT);
@@ -396,7 +407,7 @@ test_string_length_limit(void)
 
     /* {"s":"123456"} — string length 6 */
     snprintf(buf, sizeof(buf), "{\"s\":\"123456\"}");
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)buf, strlen(buf));
     expect_result("15. string length limit", r, JG_REJECT_LIMIT,
                   p.error, JG_ERR_STRING_LENGTH_LIMIT);
@@ -413,7 +424,7 @@ test_key_length_limit(void)
     jg_limits_set_defaults(&lim);
     lim.max_key_length = 3;
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("16. key length limit", r, JG_REJECT_LIMIT,
                   p.error, JG_ERR_KEY_LENGTH_LIMIT);
@@ -430,7 +441,7 @@ test_number_length_limit(void)
     jg_limits_set_defaults(&lim);
     lim.max_number_length = 5;
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("17. number length limit", r, JG_REJECT_LIMIT,
                   p.error, JG_ERR_NUMBER_LENGTH_LIMIT);
@@ -447,7 +458,7 @@ test_token_limit(void)
     jg_limits_set_defaults(&lim);
     lim.max_total_tokens = 3; /* [ + 1 + 2  then fail */
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("18. token limit", r, JG_REJECT_LIMIT,
                   p.error, JG_ERR_TOKEN_LIMIT);
@@ -465,12 +476,12 @@ test_object_member_limit(void)
     jg_limits_set_defaults(&lim);
     lim.max_object_members = 2;
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)within, strlen(within));
     expect_result("extra: object member limit boundary", r, JG_OK,
                   p.error, JG_ERR_NONE);
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_byte_at_a_time(&p, (const unsigned char *)over, strlen(over));
     expect_result("extra: object member limit exceeded", r, JG_REJECT_LIMIT,
                   p.error, JG_ERR_OBJECT_MEMBER_LIMIT);
@@ -488,12 +499,12 @@ test_array_element_limit(void)
     jg_limits_set_defaults(&lim);
     lim.max_array_elements = 2;
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)within, strlen(within));
     expect_result("extra: array element limit boundary", r, JG_OK,
                   p.error, JG_ERR_NONE);
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_byte_at_a_time(&p, (const unsigned char *)over, strlen(over));
     expect_result("extra: array element limit exceeded", r, JG_REJECT_LIMIT,
                   p.error, JG_ERR_ARRAY_ELEMENT_LIMIT);
@@ -516,23 +527,23 @@ test_unicode_length_units(void)
     lim.max_string_length = 1;
     lim.max_key_length = 1;
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_byte_at_a_time(&p, raw, sizeof(raw));
     expect_result("extra: raw UTF-8 scalar counts once", r, JG_OK,
                   p.error, JG_ERR_NONE);
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_byte_at_a_time(&p, (const unsigned char *)escaped,
                              strlen(escaped));
     expect_result("extra: surrogate pair counts once", r, JG_OK,
                   p.error, JG_ERR_NONE);
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_byte_at_a_time(&p, (const unsigned char *)two, strlen(two));
     expect_result("extra: decoded string scalar limit", r, JG_REJECT_LIMIT,
                   p.error, JG_ERR_STRING_LENGTH_LIMIT);
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_byte_at_a_time(&p, (const unsigned char *)key, strlen(key));
     expect_result("extra: surrogate key counts once", r, JG_OK,
                   p.error, JG_ERR_NONE);
@@ -582,7 +593,7 @@ test_huge_generated(void)
     lim.max_array_elements = 0;
     lim.max_object_members = 0;
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_chunks(&p, (const unsigned char *)buf, len, 4096);
     expect_result("19. huge valid JSON (50k objects)", r, JG_OK,
                   p.error, JG_ERR_NONE);
@@ -628,7 +639,7 @@ test_malformed_near_end_of_large(void)
     memcpy(buf + len, ",]", 2);
     len += 2;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_chunks(&p, (const unsigned char *)buf, len, 1024);
     expect_result("20. malformed near end of large body", r,
                   JG_REJECT_MALFORMED, p.error, JG_ERR_INVALID_CHAR);
@@ -642,7 +653,7 @@ test_top_level_scalar_default_off(void)
     jg_parser_t p;
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)"42", 2);
     expect_result("extra: top-level scalar rejected by default", r,
                   JG_REJECT_MALFORMED, p.error, JG_ERR_UNEXPECTED_TOKEN);
@@ -658,12 +669,12 @@ test_top_level_scalar_allowed(void)
     jg_limits_set_defaults(&lim);
     lim.allow_top_level_scalar = 1;
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)"true", 4);
     expect_result("extra: top-level true allowed", r, JG_OK,
                   p.error, JG_ERR_NONE);
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)"\"hi\"", 4);
     expect_result("extra: top-level string allowed", r, JG_OK,
                   p.error, JG_ERR_NONE);
@@ -675,15 +686,15 @@ test_empty_containers(void)
     jg_parser_t p;
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)"{}", 2);
     expect_result("extra: empty object", r, JG_OK, p.error, JG_ERR_NONE);
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)"[]", 2);
     expect_result("extra: empty array", r, JG_OK, p.error, JG_ERR_NONE);
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)"{\"a\":[]}", 8);
     expect_result("extra: nested empty array", r, JG_OK, p.error, JG_ERR_NONE);
 }
@@ -698,12 +709,12 @@ test_utf8_string(void)
     };
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, json, sizeof(json));
     expect_result("extra: valid UTF-8 in string", r, JG_OK, p.error, JG_ERR_NONE);
 
     /* Split multi-byte across chunks */
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = jg_parser_feed(&p, json, 7); /* up to and including 0xC3 */
     if (r != JG_NEED_MORE && r != JG_OK) {
         expect_result("extra: UTF-8 split across chunks", r, JG_OK,
@@ -731,7 +742,7 @@ test_invalid_utf8(void)
     };
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, json, sizeof(json));
     expect_result("extra: invalid UTF-8", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_INVALID_UTF8);
@@ -744,7 +755,7 @@ test_whitespace_around(void)
     const char *json = "  \n\t { \"a\" : 1 }  \r\n";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("extra: surrounding whitespace", r, JG_OK,
                   p.error, JG_ERR_NONE);
@@ -757,7 +768,7 @@ test_duplicate_keys_allowed_by_default(void)
     const char *json = "{\"a\":1,\"a\":2}";
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)json, strlen(json));
     expect_result("extra: duplicate keys accepted by default", r, JG_OK,
                   p.error, JG_ERR_NONE);
@@ -776,18 +787,18 @@ test_duplicate_keys_rejected_when_enabled(void)
     jg_limits_set_defaults(&lim);
     lim.reject_duplicate_keys = 1;
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)dup, strlen(dup));
     expect_result("extra: duplicate keys rejected when enabled", r,
                   JG_REJECT_MALFORMED, p.error, JG_ERR_DUPLICATE_KEY);
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_byte_at_a_time(&p, (const unsigned char *)escaped_dup,
                              strlen(escaped_dup));
     expect_result("extra: escaped duplicate key rejected", r,
                   JG_REJECT_MALFORMED, p.error, JG_ERR_DUPLICATE_KEY);
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_all(&p, (const unsigned char *)nested_same_name,
                   strlen(nested_same_name));
     expect_result("extra: same key allowed in nested object", r, JG_OK,
@@ -835,7 +846,7 @@ test_duplicate_key_table_limit(void)
     lim.max_object_members = 0;
     lim.max_total_tokens = 0;
 
-    jg_parser_init(&p, &lim);
+    init_parser(&p, &lim);
     r = parse_chunks(&p, (const unsigned char *)buf, len, 31);
     expect_result("extra: duplicate-key table limit", r, JG_REJECT_LIMIT,
                   p.error, JG_ERR_DUPLICATE_KEY_LIMIT);
@@ -891,7 +902,7 @@ test_required_edge_cases(void)
         jg_limits_set_defaults(&lim);
         lim.allow_top_level_scalar = cases[i].allow_scalar;
 
-        jg_parser_init(&p, &lim);
+        init_parser(&p, &lim);
         if (cases[i].bytewise) {
             r = parse_byte_at_a_time(&p,
                                      (const unsigned char *)cases[i].json,
@@ -914,7 +925,7 @@ test_control_char_in_string(void)
     };
     jg_result_t r;
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_byte_at_a_time(&p, json, sizeof(json));
     expect_result("edge: raw control char in string", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_INVALID_CHAR);
@@ -934,24 +945,24 @@ test_unicode_surrogates(void)
     };
     const unsigned char split2[] = { 'C', '0', '0', '"', '}' };
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_byte_at_a_time(&p, (const unsigned char *)valid, strlen(valid));
     expect_result("edge: surrogate pair bytewise", r, JG_OK,
                   p.error, JG_ERR_NONE);
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)unpaired_high,
                   strlen(unpaired_high));
     expect_result("edge: unpaired high surrogate", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_INVALID_UNICODE_ESCAPE);
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = parse_all(&p, (const unsigned char *)unpaired_low,
                   strlen(unpaired_low));
     expect_result("edge: unpaired low surrogate", r, JG_REJECT_MALFORMED,
                   p.error, JG_ERR_INVALID_UNICODE_ESCAPE);
 
-    jg_parser_init(&p, NULL);
+    init_parser(&p, NULL);
     r = jg_parser_feed(&p, split1, sizeof(split1));
     if (r != JG_NEED_MORE && r != JG_OK) {
         expect_result("edge: split surrogate pair", r, JG_OK,
@@ -988,7 +999,7 @@ test_payload_file(const char *name, const char *file,
         return;
     }
 
-    jg_parser_init(&p, lim);
+    init_parser(&p, lim);
     if (bytewise) {
         r = parse_byte_at_a_time(&p, data, len);
     } else {

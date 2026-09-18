@@ -75,6 +75,7 @@ main(int argc, char **argv)
         lim.max_total_tokens = 0;
         lim.max_array_elements = 0;
         lim.max_object_members = 0;
+        memset(&p, 0, sizeof(p));
         jg_parser_init(&p, &lim);
 
         t0 = now_s();

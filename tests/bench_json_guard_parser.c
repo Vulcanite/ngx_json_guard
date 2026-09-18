@@ -11,6 +11,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int
 main(int argc, char **argv)
@@ -38,6 +39,7 @@ main(int argc, char **argv)
     lim.max_total_tokens = 0;
     lim.max_array_elements = 0;
     lim.max_object_members = 0;
+    memset(&p, 0, sizeof(p));
     jg_parser_init(&p, &lim);
 
     while ((n = fread(buf, 1, sizeof(buf), fp)) > 0) {
