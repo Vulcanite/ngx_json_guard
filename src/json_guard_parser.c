@@ -151,7 +151,7 @@ jg_pop(jg_parser_t *p)
     if (p->depth == 0) {
         return jg_fail(p, JG_INTERNAL_ERROR, JG_ERR_UNEXPECTED_TOKEN);
     }
-    if (p->limits.reject_duplicate_keys) {
+    if (p->limits.reject_duplicate_keys && p->dup_keys != NULL) {
         for (i = 0; i < JG_DUP_KEY_TABLE_SIZE; i++) {
             if (p->dup_keys[i].occupied && p->dup_keys[i].depth == p->depth) {
                 p->dup_keys[i].occupied = 0;
@@ -223,6 +223,9 @@ jg_check_duplicate_key(jg_parser_t *p)
     if (!p->limits.reject_duplicate_keys) {
         return JG_OK;
     }
+    if (p->dup_keys == NULL) {
+        return jg_fail(p, JG_INTERNAL_ERROR, JG_ERR_DUPLICATE_KEY_LIMIT);
+    }
     if (p->depth == 0) {
         return jg_fail(p, JG_INTERNAL_ERROR, JG_ERR_UNEXPECTED_TOKEN);
     }
@@ -234,7 +237,7 @@ jg_check_duplicate_key(jg_parser_t *p)
         pos = (slot + i) % JG_DUP_KEY_TABLE_SIZE;
         if (!p->dup_keys[pos].occupied) {
             if (p->dup_key_used >= JG_DUP_KEY_TABLE_SIZE) {
-                return jg_fail(p, JG_REJECT_LIMIT,
+                return jg_fail(p, JG_REJECT_DUP_TABLE,
                                JG_ERR_DUPLICATE_KEY_LIMIT);
             }
             p->dup_keys[pos].occupied = 1;
@@ -254,7 +257,7 @@ jg_check_duplicate_key(jg_parser_t *p)
         }
     }
 
-    return jg_fail(p, JG_REJECT_LIMIT, JG_ERR_DUPLICATE_KEY_LIMIT);
+    return jg_fail(p, JG_REJECT_DUP_TABLE, JG_ERR_DUPLICATE_KEY_LIMIT);
 }
 
 static jg_result_t
@@ -571,6 +574,18 @@ jg_parser_init(jg_parser_t *parser, const jg_limits_t *limits)
     parser->state  = JG_ST_ROOT_START;
     parser->error  = JG_ERR_NONE;
     parser->result = JG_NEED_MORE;
+    parser->dup_keys = NULL;
+    parser->dup_key_used = 0;
+}
+
+void
+jg_parser_set_dup_key_table(jg_parser_t *parser, jg_dup_key_slot_t *table)
+{
+    if (parser == NULL) {
+        return;
+    }
+    parser->dup_keys = table;
+    parser->dup_key_used = 0;
 }
 
 jg_error_t

@@ -25,8 +25,11 @@
 #define JG_STACK_MAX_DEPTH              1024
 
 /*
- * Optional duplicate-key detection uses a fixed fingerprint table. This keeps
- * memory bounded; if enabled and the table fills, validation fails closed.
+ * Optional duplicate-key detection uses a caller-provided fingerprint
+ * table of JG_DUP_KEY_TABLE_SIZE slots. Enabling the feature plus an
+ * object with more unique keys than the table fails closed with
+ * JG_REJECT_DUP_TABLE (distinct from JG_REJECT_LIMIT). Raise is not
+ * supported; disable the feature or split the object.
  */
 #define JG_DUP_KEY_TABLE_SIZE           1024
 

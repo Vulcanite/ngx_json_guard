@@ -23,6 +23,7 @@ typedef enum {
     JG_NEED_MORE,
     JG_REJECT_MALFORMED,
     JG_REJECT_LIMIT,
+    JG_REJECT_DUP_TABLE,
     JG_INTERNAL_ERROR
 } jg_result_t;
 
@@ -60,13 +61,27 @@ typedef struct {
 } jg_limits_t;
 
 /*
+ * Optional duplicate-key fingerprint slot. Allocated by the caller only
+ * when reject_duplicate_keys is enabled.
+ */
+typedef struct {
+    size_t   depth;
+    size_t   units;
+    uint64_t hash1;
+    uint64_t hash2;
+    int      occupied;
+} jg_dup_key_slot_t;
+
+/*
  * Parser object is stack-allocatable. Fields are internal; callers must
  * only use the public API below. Layout is exposed so sizeof works.
  */
 typedef struct jg_parser_s jg_parser_t;
 
 /* Guaranteed upper bound for static allocation if preferred. */
-#define JG_PARSER_SIZE 98304
+/* Measured sizeof(jg_parser_t) is 16600 on LP64; keep a small headroom.
+ * The optional duplicate-key table (40 KiB) is allocated separately. */
+#define JG_PARSER_SIZE 20480
 void jg_limits_set_defaults(jg_limits_t *limits);
 
 /*
@@ -79,6 +94,12 @@ void jg_limits_set_defaults(jg_limits_t *limits);
  * callers that stack-allocate jg_parser_t must zero it first.
  */
 void jg_parser_init(jg_parser_t *parser, const jg_limits_t *limits);
+
+/*
+ * Attach a zeroed duplicate-key table of JG_DUP_KEY_TABLE_SIZE slots.
+ * Required when reject_duplicate_keys is on; ignored otherwise.
+ */
+void jg_parser_set_dup_key_table(jg_parser_t *parser, jg_dup_key_slot_t *table);
 
 /*
  * Feed the next chunk of bytes. Chunks may split anywhere.
@@ -134,14 +155,8 @@ struct jg_parser_s {
     uint64_t key_hash2;
     size_t   key_units;
 
-    struct {
-        size_t   depth;
-        size_t   units;
-        uint64_t hash1;
-        uint64_t hash2;
-        int      occupied;
-    } dup_keys[JG_DUP_KEY_TABLE_SIZE];
-    size_t dup_key_used;
+    jg_dup_key_slot_t *dup_keys; /* NULL unless reject_duplicate_keys */
+    size_t             dup_key_used;
 
     int finished;
 };

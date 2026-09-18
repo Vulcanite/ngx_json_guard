@@ -486,6 +486,8 @@ ngx_http_json_guard_result_to_status(jg_result_t res)
         return NGX_HTTP_BAD_REQUEST;           /* 400 */
     case JG_REJECT_LIMIT:
         return NGX_HTTP_REQUEST_ENTITY_TOO_LARGE; /* 413 */
+    case JG_REJECT_DUP_TABLE:
+        return NGX_HTTP_REQUEST_ENTITY_TOO_LARGE; /* 413; distinct parser result */
     case JG_INTERNAL_ERROR:
     default:
         return NGX_HTTP_INTERNAL_SERVER_ERROR; /* 500 */
@@ -887,6 +889,16 @@ ngx_http_json_guard_handler(ngx_http_request_t *r)
 
     ngx_http_json_guard_limits_from_conf(&lim, conf);
     jg_parser_init(&ctx->parser, &lim);
+    if (lim.reject_duplicate_keys) {
+        jg_dup_key_slot_t *table;
+
+        table = ngx_pcalloc(r->pool,
+                            sizeof(jg_dup_key_slot_t) * JG_DUP_KEY_TABLE_SIZE);
+        if (table == NULL) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+        jg_parser_set_dup_key_table(&ctx->parser, table);
+    }
     ctx->status = NGX_OK;
     ngx_http_set_ctx(r, ctx, ngx_http_json_guard_module);
 

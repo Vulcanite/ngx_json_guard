@@ -100,6 +100,11 @@ init_parser(jg_parser_t *p, const jg_limits_t *limits)
 {
     memset(p, 0, sizeof(*p));
     jg_parser_init(p, limits);
+    if (p->limits.reject_duplicate_keys) {
+        static jg_dup_key_slot_t table[JG_DUP_KEY_TABLE_SIZE];
+        memset(table, 0, sizeof(table));
+        jg_parser_set_dup_key_table(p, table);
+    }
 }
 
 static jg_result_t
@@ -848,7 +853,7 @@ test_duplicate_key_table_limit(void)
 
     init_parser(&p, &lim);
     r = parse_chunks(&p, (const unsigned char *)buf, len, 31);
-    expect_result("extra: duplicate-key table limit", r, JG_REJECT_LIMIT,
+    expect_result("extra: duplicate-key table limit", r, JG_REJECT_DUP_TABLE,
                   p.error, JG_ERR_DUPLICATE_KEY_LIMIT);
 
     free(buf);
