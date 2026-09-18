@@ -12,6 +12,7 @@
 #   3. Structurally valid JSON with attack marker is blocked by ModSecurity (403).
 #   4. Large valid JSON with tail marker is fully preserved (upstream + ModSec).
 #   5. Non-JSON Content-Type skips json_guard structural validation.
+#   10. GET / empty POST / DELETE skip the guard under default json_guard_methods.
 
 set -euo pipefail
 
@@ -189,10 +190,20 @@ printf '%s' '{"a":1,"a":2}' >"$TMPDIR/dup.json"
 CODE=$(http_code POST "$BASE/api/echo" "application/json" "$TMPDIR/dup.json")
 check "9. duplicate object key -> 400" test "$CODE" = "400"
 
-# --- 10. JSON bodies are guarded regardless of HTTP method ---
+# --- 10. GET with JSON Content-Type and no body is not guarded ---
+CODE=$(curl -sS -o "$TMPDIR/body.out" -w "%{http_code}" \
+  -X GET "$BASE/api/echo" -H "Content-Type: application/json")
+check "10. GET application/json with no body is not 400" test "$CODE" != "400"
+
+# --- 10b. POST with Content-Length: 0 / empty body is passed ---
+: >"$TMPDIR/empty.json"
+CODE=$(http_code POST "$BASE/api/echo" "application/json" "$TMPDIR/empty.json")
+check "10b. POST Content-Length: 0 is not 400" test "$CODE" != "400"
+
+# --- 10c. DELETE is outside the default method set (POST PUT PATCH) ---
 printf '%s' '{"a":1,}' >"$TMPDIR/delete-bad.json"
 CODE=$(http_code DELETE "$BASE/api/echo" "application/json" "$TMPDIR/delete-bad.json")
-check "10. malformed DELETE JSON -> 400" test "$CODE" = "400"
+check "10c. malformed DELETE JSON is not 400 by default" test "$CODE" != "400"
 
 # --- 11. Body-read request reference is released for keep-alive reuse ---
 check "11. two JSON requests reuse one keep-alive connection" keepalive_two_posts

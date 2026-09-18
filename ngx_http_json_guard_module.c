@@ -46,6 +46,7 @@ typedef struct {
     ngx_flag_t  enable;
     ngx_flag_t  allow_top_level_scalar;
     ngx_flag_t  reject_duplicate_keys;
+    ngx_uint_t  methods;
 
     ngx_uint_t  max_depth;
     ngx_uint_t  max_key_length;
@@ -74,6 +75,7 @@ static ngx_int_t ngx_http_json_guard_feed_chain(ngx_http_request_t *r,
     ngx_http_json_guard_ctx_t *ctx, ngx_chain_t *cl);
 static ngx_int_t ngx_http_json_guard_feed_file(ngx_http_request_t *r,
     ngx_http_json_guard_ctx_t *ctx, ngx_temp_file_t *tf);
+static int ngx_http_json_guard_body_is_empty(ngx_http_request_t *r);
 static ngx_int_t ngx_http_json_guard_content_type_ok(ngx_http_request_t *r);
 static ngx_int_t ngx_http_json_guard_result_to_status(jg_result_t res);
 static void ngx_http_json_guard_limits_from_conf(jg_limits_t *lim,
@@ -95,6 +97,26 @@ static ngx_http_variable_t ngx_http_json_guard_variables[] = {
       NGX_HTTP_VAR_NOCACHEABLE, 0 },
 
     ngx_http_null_variable
+};
+
+
+static ngx_conf_bitmask_t  ngx_http_json_guard_methods_mask[] = {
+    { ngx_string("GET"),      NGX_HTTP_GET },
+    { ngx_string("HEAD"),     NGX_HTTP_HEAD },
+    { ngx_string("POST"),     NGX_HTTP_POST },
+    { ngx_string("PUT"),      NGX_HTTP_PUT },
+    { ngx_string("DELETE"),   NGX_HTTP_DELETE },
+    { ngx_string("MKCOL"),    NGX_HTTP_MKCOL },
+    { ngx_string("COPY"),     NGX_HTTP_COPY },
+    { ngx_string("MOVE"),     NGX_HTTP_MOVE },
+    { ngx_string("OPTIONS"),  NGX_HTTP_OPTIONS },
+    { ngx_string("PROPFIND"), NGX_HTTP_PROPFIND },
+    { ngx_string("PROPPATCH"),NGX_HTTP_PROPPATCH },
+    { ngx_string("LOCK"),     NGX_HTTP_LOCK },
+    { ngx_string("UNLOCK"),   NGX_HTTP_UNLOCK },
+    { ngx_string("PATCH"),    NGX_HTTP_PATCH },
+    { ngx_string("TRACE"),    NGX_HTTP_TRACE },
+    { ngx_null_string, 0 }
 };
 
 
@@ -178,6 +200,13 @@ static ngx_command_t ngx_http_json_guard_commands[] = {
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_json_guard_loc_conf_t, reject_duplicate_keys),
       NULL },
+
+    { ngx_string("json_guard_methods"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_1MORE,
+      ngx_conf_set_bitmask_slot,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(ngx_http_json_guard_loc_conf_t, methods),
+      &ngx_http_json_guard_methods_mask },
 
     ngx_null_command
 };
@@ -282,6 +311,7 @@ ngx_http_json_guard_create_loc_conf(ngx_conf_t *cf)
     conf->enable                 = NGX_CONF_UNSET;
     conf->allow_top_level_scalar = NGX_CONF_UNSET;
     conf->reject_duplicate_keys  = NGX_CONF_UNSET;
+    /* methods: 0 means unset; merged to POST|PUT|PATCH. */
     conf->max_depth              = NGX_CONF_UNSET_UINT;
     conf->max_key_length         = NGX_CONF_UNSET_UINT;
     conf->max_string_length      = NGX_CONF_UNSET_UINT;
@@ -307,6 +337,12 @@ ngx_http_json_guard_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
     ngx_conf_merge_value(conf->reject_duplicate_keys,
                          prev->reject_duplicate_keys,
                          JG_DEFAULT_REJECT_DUPLICATE_KEYS);
+
+    ngx_conf_merge_bitmask_value(conf->methods, prev->methods,
+                                 (NGX_CONF_BITMASK_SET
+                                  |NGX_HTTP_POST
+                                  |NGX_HTTP_PUT
+                                  |NGX_HTTP_PATCH));
 
     ngx_conf_merge_uint_value(conf->max_depth, prev->max_depth,
                               JG_DEFAULT_MAX_DEPTH);
@@ -467,6 +503,7 @@ ngx_http_json_guard_feed_chain(ngx_http_request_t *r,
 {
     jg_result_t   res;
     ngx_buf_t    *b;
+    ngx_file_t    file;
     size_t        len;
     u_char       *chunk;
     off_t         offset, remaining;
@@ -529,7 +566,12 @@ ngx_http_json_guard_feed_chain(ngx_http_request_t *r,
                 if ((off_t) to_read > remaining) {
                     to_read = (size_t) remaining;
                 }
-                n = ngx_read_file(b->file, chunk, to_read, offset);
+                /*
+                 * ngx_read_file() advances file->offset. Copy so we do
+                 * not mutate NGINX's shared ngx_file_t.
+                 */
+                file = *b->file;
+                n = ngx_read_file(&file, chunk, to_read, offset);
                 if (n == NGX_ERROR || n == 0) {
                     ngx_log_error(NGX_LOG_ERR, r->connection->log, ngx_errno,
                                   "json_guard: failed reading in-file body buf");
@@ -558,14 +600,19 @@ ngx_http_json_guard_feed_file(ngx_http_request_t *r,
     off_t         offset, remaining;
     size_t        to_read;
     jg_result_t   res;
-    ngx_file_t   *file;
+    ngx_file_t    file;
 
     if (tf == NULL) {
         return NGX_OK;
     }
 
-    file = &tf->file;
-    if (file->fd == NGX_INVALID_FILE) {
+    /*
+     * ngx_read_file() mutates file->offset (and sys_offset without pread).
+     * Read through a local copy so NGINX's temp_file->file stays intact
+     * for later body consumers.
+     */
+    file = tf->file;
+    if (file.fd == NGX_INVALID_FILE) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
                       "json_guard: invalid temp file fd");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -598,7 +645,7 @@ ngx_http_json_guard_feed_file(ngx_http_request_t *r,
             to_read = (size_t) remaining;
         }
 
-        n = ngx_read_file(file, buf, to_read, offset);
+        n = ngx_read_file(&file, buf, to_read, offset);
         if (n == NGX_ERROR) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, ngx_errno,
                           "json_guard: ngx_read_file() failed");
@@ -626,6 +673,49 @@ ngx_http_json_guard_feed_file(ngx_http_request_t *r,
 }
 
 
+static int
+ngx_http_json_guard_body_is_empty(ngx_http_request_t *r)
+{
+    ngx_http_request_body_t  *rb;
+    ngx_chain_t              *cl;
+    ngx_buf_t                *b;
+
+    if (r->headers_in.content_length_n == 0) {
+        return 1;
+    }
+
+    rb = r->request_body;
+    if (rb == NULL) {
+        return 1;
+    }
+
+    if (rb->temp_file && rb->temp_file->offset > 0) {
+        return 0;
+    }
+
+    if (rb->bufs == NULL) {
+        return 1;
+    }
+
+    for (cl = rb->bufs; cl; cl = cl->next) {
+        b = cl->buf;
+        if (b == NULL) {
+            continue;
+        }
+
+        if (ngx_buf_in_memory(b) && b->pos != NULL && b->last > b->pos) {
+            return 0;
+        }
+
+        if (b->in_file && b->file_last > b->file_pos) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+
 static ngx_int_t
 ngx_http_json_guard_process_body(ngx_http_request_t *r,
     ngx_http_json_guard_ctx_t *ctx)
@@ -634,19 +724,13 @@ ngx_http_json_guard_process_body(ngx_http_request_t *r,
     jg_result_t               res;
     ngx_int_t                 rc;
 
-    rb = r->request_body;
-    if (rb == NULL) {
-        /* JSON validation was selected; absence of a body is empty JSON. */
-        res = jg_parser_finish(&ctx->parser);
-        if (res != JG_OK) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                          "json_guard: REJECT status=%i err=%s",
-                          (ngx_int_t) ngx_http_json_guard_result_to_status(res),
-                          jg_error_string(jg_parser_error(&ctx->parser)));
-            return ngx_http_json_guard_result_to_status(res);
-        }
+    if (ngx_http_json_guard_body_is_empty(r)) {
+        ngx_log_error(NGX_LOG_INFO, r->connection->log, 0,
+                      "json_guard: ACCEPT empty body");
         return NGX_OK;
     }
+
+    rb = r->request_body;
 
     /*
      * Prefer walking the buf chain (memory and/or in-file ranges). When
@@ -671,16 +755,9 @@ ngx_http_json_guard_process_body(ngx_http_request_t *r,
             return rc;
         }
     } else {
-        /* Empty body with Content-Type: application/json → invalid JSON */
-        res = jg_parser_finish(&ctx->parser);
-        if (res != JG_OK) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                          "json_guard: REJECT status=%i err=%s",
-                          (ngx_int_t) ngx_http_json_guard_result_to_status(res),
-                          jg_error_string(jg_parser_error(&ctx->parser)));
-            return ngx_http_json_guard_result_to_status(res);
-        }
-        return NGX_OK;
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "json_guard: missing body buffers after non-empty check");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
     res = jg_parser_finish(&ctx->parser);
@@ -777,8 +854,17 @@ ngx_http_json_guard_handler(ngx_http_request_t *r)
         return NGX_DECLINED;
     }
 
-    /* JSON bodies are validated regardless of the HTTP method. */
     if (!ngx_http_json_guard_content_type_ok(r)) {
+        return NGX_DECLINED;
+    }
+
+    /* Default: POST PUT PATCH. GET/HEAD/DELETE/OPTIONS skip the guard. */
+    if (!(r->method & (conf->methods & ~(ngx_uint_t) NGX_CONF_BITMASK_SET))) {
+        return NGX_DECLINED;
+    }
+
+    /* No body / Content-Length: 0 is not a JSON document; pass through. */
+    if (r->headers_in.content_length_n == 0) {
         return NGX_DECLINED;
     }
 
@@ -810,7 +896,7 @@ ngx_http_json_guard_handler(ngx_http_request_t *r)
      */
     rc = ngx_http_read_client_request_body(r, ngx_http_json_guard_post_handler);
 
-    if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
+    if (rc == NGX_ERROR || rc >= NGX_HTTP_SPECIAL_RESPONSE) {
         return rc;
     }
 

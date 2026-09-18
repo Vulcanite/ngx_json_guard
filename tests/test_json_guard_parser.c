@@ -885,6 +885,11 @@ test_required_edge_cases(void)
           JG_REJECT_MALFORMED, JG_ERR_UNEXPECTED_TOKEN, 0, 1 },
         { "edge: concatenated documents", "{}{}",
           JG_REJECT_MALFORMED, JG_ERR_TRAILING_GARBAGE, 0, 1 },
+        /*
+         * Empty input is not a JSON document. The NGINX module skips
+         * Content-Length: 0 / no-body requests before calling the parser;
+         * this assertion is the parser-side contract.
+         */
         { "edge: empty body", "",
           JG_REJECT_MALFORMED, JG_ERR_UNEXPECTED_TOKEN, 0, 0 },
         { "edge: top-level number allowed", "42",
