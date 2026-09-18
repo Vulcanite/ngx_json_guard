@@ -3,7 +3,7 @@
  * Loads the file into memory, then times repeated full parse passes
  * (64 KiB chunks, parser reset each pass) with CLOCK_MONOTONIC.
  * Pass 0 is an untimed warmup. Prints one line:
- *   passes median_s min_s max_s bytes mib_per_s_median
+ *   passes median_s p99_s min_s max_s bytes mib_per_s_median
  */
 #include "json_guard_parser.h"
 
@@ -36,7 +36,7 @@ main(int argc, char **argv)
     long fsize;
     size_t off, n;
     int passes, i, ok;
-    double *times, med;
+    double *times, med, p99;
 
     if (argc != 3) {
         fprintf(stderr, "usage: %s <file.json> <passes>\n", argv[0]);
@@ -110,7 +110,8 @@ main(int argc, char **argv)
 
     qsort(times, (size_t)passes, sizeof(double), cmp);
     med = times[passes / 2];
-    printf("%d %.6f %.6f %.6f %ld %.1f\n", passes, med, times[0],
+    p99 = times[(size_t)((passes - 1) * 99 / 100)];
+    printf("%d %.6f %.6f %.6f %.6f %ld %.1f\n", passes, med, p99, times[0],
            times[passes - 1], fsize, (double)fsize / (1024.0 * 1024.0) / med);
     return 0;
 }

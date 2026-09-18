@@ -950,13 +950,14 @@ def single_report(meta: dict[str, Any], summary: dict[str, Any]) -> str:
         f"- Outcomes: `{summary['outcomes']}`",
         f"- Matched rule IDs: `{meta['matched_rule_ids']}`",
         "",
-        "| Case | Correct | Outcomes | p50 ms | p95 ms | Guard p50 ms | Upstream p50 ms | Preserved |",
-        "|---|---:|---|---:|---:|---:|---:|---:|",
+        "| Case | Correct | Outcomes | p50 ms | p95 ms | p99 ms | Guard p50 ms | Upstream p50 ms | Preserved |",
+        "|---|---:|---|---:|---:|---:|---:|---:|---:|",
     ]
     for name, item in summary["by_case"].items():
         lines.append(
             f"| {name} | {item['correct']}/{item['count']} | `{item['outcomes']}` | "
             f"{fmt(item['latency_ms']['p50'])} | {fmt(item['latency_ms']['p95'])} | "
+            f"{fmt(item['latency_ms']['p99'])} | "
             f"{fmt(item['guard_ms']['p50'])} | {fmt(item['upstream_ms']['p50'])} | "
             f"{item['body_preserved']} |"
         )
@@ -1003,8 +1004,8 @@ def comparison_report(args: argparse.Namespace) -> int:
         "normalized outcomes distinguish a WAF rejection from a body",
         "that reached the upstream and was rejected there.",
         "",
-        "| Engine | Suite | Workers | Correct | MiB/s | CPU % | Peak MiB | p50 ms | p95 ms | Upstream p50 ms | Steal % | Noisy |",
-        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        "| Engine | Suite | Workers | Correct | MiB/s | CPU % | Peak MiB | p50 ms | p95 ms | p99 ms | Upstream p50 ms | Steal % | Noisy |",
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for run in runs:
         meta, summary = run["meta"], run["summary"]
@@ -1014,6 +1015,7 @@ def comparison_report(args: argparse.Namespace) -> int:
             f"{summary['body_mib_per_second']:.2f} | {summary['average_cpu_percent']:.1f} | "
             f"{summary['memory_peak_bytes'] / MIB:.1f} | "
             f"{fmt(summary['latency_ms']['p50'])} | {fmt(summary['latency_ms']['p95'])} | "
+            f"{fmt(summary['latency_ms']['p99'])} | "
             f"{fmt(summary.get('upstream_ms', {}).get('p50'))} | {fmt(steal)} | "
             f"{meta.get('noise_warning', False)} |"
         )
@@ -1263,7 +1265,7 @@ def comparison_report(args: argparse.Namespace) -> int:
             "engine", "suite", "workers", "requests", "correct",
             "wall_seconds", "body_mib_per_second", "requests_per_second",
             "cpu_usage_seconds", "average_cpu_percent", "memory_peak_bytes",
-            "latency_p50_ms", "latency_p95_ms", "guard_p50_ms",
+            "latency_p50_ms", "latency_p95_ms", "latency_p99_ms", "guard_p50_ms",
             "upstream_p50_ms", "runtime", "path",
             "host_steal_percent", "noise_warning",
         ]
@@ -1285,6 +1287,7 @@ def comparison_report(args: argparse.Namespace) -> int:
                 "memory_peak_bytes": summary["memory_peak_bytes"],
                 "latency_p50_ms": summary["latency_ms"]["p50"],
                 "latency_p95_ms": summary["latency_ms"]["p95"],
+                "latency_p99_ms": summary["latency_ms"]["p99"],
                 "guard_p50_ms": summary["guard_ms"]["p50"],
                 "upstream_p50_ms": summary.get("upstream_ms", {}).get("p50"),
                 "runtime": meta.get("runtime", "docker"),

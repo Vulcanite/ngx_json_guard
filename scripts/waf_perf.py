@@ -318,15 +318,16 @@ def markdown_report(meta: dict[str, Any], summary: dict[str, Any], results: list
         "",
         "## Per Case",
         "",
-        "| Case | Count | Correct | Statuses | p50 ms | p95 ms | p99 ms | Guard p50 ms |",
-        "|---|---:|---:|---|---:|---:|---:|---:|",
+        "| Case | Count | Correct | Statuses | p50 ms | p95 ms | p99 ms | Guard p50 ms | Guard p99 ms |",
+        "|---|---:|---:|---|---:|---:|---:|---:|---:|",
     ]
     for name, item in summary["by_case"].items():
         lat = item["latency_ms"]
         guard = item["guard_ms"]
         lines.append(
             f"| {name} | {item['count']} | {item['correct']} | `{item['statuses']}` | "
-            f"{fmt(lat['p50'])} | {fmt(lat['p95'])} | {fmt(lat['p99'])} | {fmt(guard['p50'])} |"
+            f"{fmt(lat['p50'])} | {fmt(lat['p95'])} | {fmt(lat['p99'])} | "
+            f"{fmt(guard['p50'])} | {fmt(guard['p99'])} |"
         )
 
     failures = [r for r in results if not r.correct]
@@ -346,7 +347,7 @@ def markdown_report(meta: dict[str, Any], summary: dict[str, Any], results: list
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", default="http://127.0.0.1:8081")
-    parser.add_argument("--profile", choices=("correctness", "benchmark"), default="correctness")
+    parser.add_argument("--profile", choices=("correctness", "benchmark", "high-concurrency"), default="correctness")
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--small-repeat", type=int, default=10)
     parser.add_argument("--large-repeat", type=int, default=1)
@@ -364,6 +365,15 @@ def main() -> int:
     tasks: list[Case] = []
     if args.profile == "correctness":
         tasks = list(cases)
+    elif args.profile == "high-concurrency":
+        # JSON-only, many concurrent workers. Blocking temp-file reads pin
+        # the NGINX worker, which shows up in p99 rather than serial p50.
+        for case in cases:
+            if case.group != "json":
+                continue
+            repeat = args.large_repeat if case.large else args.small_repeat
+            tasks.extend([case] * repeat)
+        random.Random(args.seed).shuffle(tasks)
     else:
         for case in cases:
             repeat = args.large_repeat if case.large else args.small_repeat

@@ -5,7 +5,7 @@ CFLAGS   ?= -Wall -Wextra -Werror -O2
 CPPFLAGS += -I./src
 
 .PHONY: all test test-asan bench bench-micro clean integration docker-build docker-test payloads \
-	waf-correctness waf-perf cross-waf-smoke cross-waf-quick cross-waf-full \
+	waf-correctness waf-perf waf-high-concurrency cross-waf-smoke cross-waf-quick cross-waf-full \
 	cross-waf-large native-setup native-smoke native-quick native-full \
 	native-large native-check native-api-setup native-api-status native-api-collect
 
@@ -63,6 +63,10 @@ waf-correctness:
 
 waf-perf:
 	PROFILE=benchmark WORKERS=4 SMALL_REPEAT=10 LARGE_REPEAT=3 \
+		./scripts/run_waf_perf.sh
+
+waf-high-concurrency:
+	PROFILE=high-concurrency WORKERS=32 SMALL_REPEAT=40 LARGE_REPEAT=4 \
 		./scripts/run_waf_perf.sh
 
 cross-waf-smoke:
