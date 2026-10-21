@@ -1,16 +1,9 @@
 # Diagram sources (Mermaid)
 
 Single source of truth for every diagram rendered in the documentation
-site (`docs-site/`). Each diagram below is hand-authored Mermaid — no
-AI-diagram service was used to generate or render them. The Docusaurus
+site (`docs-site/`). Each diagram below is Mermaid source. The Docusaurus
 site renders these blocks client-side via `@docusaurus/theme-mermaid`;
 GitHub renders the same blocks natively in this file.
-
-> Note: the original request was to draw these with the Eraser MCP and
-> export as Mermaid. That MCP server is not connected in this
-> environment, so the diagrams were written directly as Mermaid source —
-> which is the same format Eraser exports. If the Eraser MCP becomes
-> available, these sources can be round-tripped through it unchanged.
 
 Chart data comes exclusively from the 2026-08-24 benchmark runs
 (`BENCHMARK.md`, commit `08851ee`).
@@ -54,7 +47,7 @@ sequenceDiagram
 
     C->>N: POST /api (Content-Type: application/json)
     N->>N: ngx_http_read_client_request_body()<br/>memory buffers or temp file
-    N->>P: feed body in 64 KiB chunks
+    N->>P: feed body buffers<br/>(temp file read in 64 KiB chunks)
     alt malformed JSON
         P-->>N: reject
         N-->>C: 400 (body never proxied)
