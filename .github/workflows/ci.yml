@@ -1,15 +1,21 @@
 name: CI
 
+# Builds the NGINX module against a pinned NGINX release and runs the
+# parser test suite (plain, then under AddressSanitizer + UBSan).
+# The docs site has its own workflow (docs.yml); this one covers the C code.
+
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
-env:
-  NGINX_VERSION: "1.30.4"
+permissions:
+  contents: read
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+  module:
+    name: Build dynamic module (NGINX from versions.env)
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -17,25 +23,52 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential curl ca-certificates \
-            libpcre3-dev libpcre2-dev zlib1g-dev
+            build-essential curl ca-certificates libpcre2-dev zlib1g-dev
 
-      - name: Fetch NGINX ${{ env.NGINX_VERSION }} source
+      # NGINX_VERSION and NGINX_SHA256 come from the same pin file the
+      # native benchmark lab uses, so CI and the lab build the same source.
+      - name: Download and verify pinned NGINX source
         run: |
-          curl -fsSL -o /tmp/nginx-${NGINX_VERSION}.tar.gz \
+          set -euo pipefail
+          . benchmark/native/versions.env
+          echo "NGINX_VERSION=${NGINX_VERSION}" >> "$GITHUB_ENV"
+          curl -fsSL -o "$RUNNER_TEMP/nginx.tar.gz" \
             "https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz"
-          tar -xzf /tmp/nginx-${NGINX_VERSION}.tar.gz -C /tmp
+          printf '%s  %s\n' "$NGINX_SHA256" "$RUNNER_TEMP/nginx.tar.gz" \
+            | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/nginx.tar.gz" -C "$RUNNER_TEMP"
 
-      - name: Configure and build dynamic module
+      - name: Configure and build dynamic module (--with-compat)
         run: |
-          cd "/tmp/nginx-${NGINX_VERSION}"
-          ./configure --with-compat --add-dynamic-module="${GITHUB_WORKSPACE}"
-          make modules
-          test -f objs/ngx_http_json_guard_module.so
+          set -euo pipefail
+          cd "$RUNNER_TEMP/nginx-${NGINX_VERSION}"
+          ./configure --with-compat \
+            --add-dynamic-module="$GITHUB_WORKSPACE"
+          make -j"$(nproc)" modules
+          test -s objs/ngx_http_json_guard_module.so
           ls -l objs/ngx_http_json_guard_module.so
+
+  parser-tests:
+    name: Parser tests (${{ matrix.cc }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    env:
+      CC: ${{ matrix.cc }}
+      # UBSan only prints by default; make any report fail the job.
+      ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Parser unit tests
         run: make test
 
-      - name: Parser tests with ASan and UBSan
+      - name: Parser unit tests under ASan + UBSan
         run: make test-asan
+
+      - name: Benchmark harness checks
+        if: matrix.cc == 'gcc'
+        run: make native-check
