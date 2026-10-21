@@ -71,7 +71,7 @@ This module is deliberately narrow, and the boundaries are the point:
 - **Not a WAF.** No signatures, no CRS rules, no SQLi or XSS detection.
   ModSecurity remains the final inspection engine.
 - **Not a body parser for content inspection.** It never builds a DOM and
-  never retains the document; validation memory is O(depth), not O(body).
+  never retains the document; validation memory is fixed, not O(body).
 - **Not a ModSecurity replacement or bypass.** It runs *before* ModSecurity
   in the same NGINX, rejects only what you configured as structurally
   invalid, and leaves every accepted body in place for full inspection.
@@ -83,8 +83,8 @@ This module is deliberately narrow, and the boundaries are the point:
    (inside escapes, UTF-8 sequences, surrogate pairs).
 2. **Bounded memory, always.** A 16,600-byte parser object covers the
    whole request regardless of body size (plus a 40 KiB duplicate-key
-   table only when that feature is on); huge bodies are walked in
-   64 KiB chunks over NGINX buffers or temp files.
+   table only when that feature is on); NGINX's in-memory buffers are
+   fed as-is and spooled temp files are read in 64 KiB chunks.
 3. **Fail closed on structure, silent on content.** Strict RFC 8259
    semantics: trailing commas, bad escapes, invalid UTF-8, unpaired
    surrogates, and trailing garbage are all rejected. What the bytes *say*

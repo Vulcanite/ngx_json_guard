@@ -90,7 +90,8 @@ void jg_limits_set_defaults(jg_limits_t *limits);
  * The parser object MUST already be zeroed by the caller (ngx_pcalloc,
  * calloc, or memset). jg_parser_init() does not memset the object: the
  * NGINX module allocates the request context with ngx_pcalloc, and a
- * second 56 KiB memset on that path was pure overhead. Standalone
+ * second memset of the parser (16,600 bytes on LP64) on that path was
+ * pure overhead. Standalone
  * callers that stack-allocate jg_parser_t must zero it first.
  */
 void jg_parser_init(jg_parser_t *parser, const jg_limits_t *limits);

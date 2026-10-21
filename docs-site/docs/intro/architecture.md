@@ -17,7 +17,7 @@ sequenceDiagram
 
     C->>N: POST /api (Content-Type: application/json)
     N->>N: ngx_http_read_client_request_body()<br/>memory buffers or temp file
-    N->>P: feed body in 64 KiB chunks
+    N->>P: feed body buffers<br/>(temp file read in 64 KiB chunks)
     alt malformed JSON
         P-->>N: reject
         N-->>C: 400 (body never proxied)
@@ -81,8 +81,8 @@ flowchart TB
     style B2 fill:#b98f1f,stroke:#7a5f13,color:#ffffff
 ```
 
-Nesting beyond the internal hard ceiling (1024) is clamped at
-configuration time — a `json_guard_max_depth 100000` directive cannot
+Nesting beyond the internal hard ceiling (1024) is clamped when the
+parser is initialised for each request — a `json_guard_max_depth 100000` directive cannot
 overflow the fixed stack; it is capped to the ceiling. Duplicate-key
 detection, when enabled, uses a 1024-slot fingerprint table allocated
 only for that request and fails closed with `JG_REJECT_DUP_TABLE` if the

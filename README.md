@@ -85,7 +85,7 @@ upstream application
 5. ModSecurity (typically also preaccess) can still perform full inspection on the same buffers/temp file.
 6. On failure: request is finalized with 400/413 before proxying upstream.
 
-**Module order:** the example loads `ngx_http_json_guard_module.so` before `ngx_http_modsecurity_module.so`, and the Docker build tests that the guard runs first. Textual `load_module` order alone is not a portable guarantee: NGINX reverses phase-handler registration arrays and dynamic modules may carry ordering metadata. Re-test effective ordering with the exact NGINX and ModSecurity-nginx binaries you deploy.
+**Module order:** the example loads `ngx_http_json_guard_module.so` before `ngx_http_modsecurity_module.so`, and the Docker integration suite tests that the guard runs first. Textual `load_module` order alone is not a portable guarantee: NGINX reverses phase-handler registration arrays and dynamic modules may carry ordering metadata. Re-test effective ordering with the exact NGINX and ModSecurity-nginx binaries you deploy.
 
 The module never discards or replaces the body. It only reads it for validation.
 
@@ -152,7 +152,7 @@ The parser is a pure-C finite state machine:
 - Chunks may split anywhere (strings, escapes, `\uXXXX`, numbers, literals).
 - Validates strict RFC 8259-style JSON structure.
 - Supports top-level object, array, and (optionally) scalar.
-- Memory use is **O(depth)**, not O(body size).
+- Memory use is a **fixed** 16,600-byte parser object (LP64), not O(body size).
 
 ### Build & test (no NGINX required)
 
@@ -496,7 +496,8 @@ The mixed run processed 243 MiB of request bodies in 11.01 seconds
 (`22.08 MiB/s`) at 184.6% average CPU. JSON Guard itself took roughly 145-152 ms
 p50 for accepted 20 MiB bodies; most remaining time was ModSecurity/CRS. These
 are local lab measurements, not production capacity guarantees. See
-`artifacts/waf-perf/FINAL_REPORT.md` for the comparison and caveats.
+`artifacts/waf-perf/FINAL_REPORT.md` for the comparison and caveats
+(`artifacts/` is local run output and is not committed).
 
 Synchronous CRS work can occupy both NGINX workers. During the mixed run, a few
 small requests waited about 2.8-3.6 seconds behind large scans. Four workers on
@@ -565,7 +566,8 @@ throttling, current/peak memory, memory events, I/O counters, logs, image
 digests, container inspection, and configuration snapshots in JSON, CSV, and
 Markdown.
 
-Representative reports from the constrained local run are:
+Representative reports from the constrained local run (written under the
+gitignored `artifacts/` directory, not committed) are:
 
 - `artifacts/cross-waf/smoke-final-20260710/COMPARISON.md`: finalized harness
   smoke run, including audit logs and executable build/version metadata.
@@ -706,10 +708,6 @@ from bundles; their manifest and SHA-256 values are included.
 - [ ] Metrics counters (accepted/rejected/malformed/limit via stub_status or Prometheus).
 
 ---
-
-## License
-
-Choose and add a license appropriate for your distribution (e.g. BSD-2-Clause, common for NGINX modules). Not specified in this scaffold.
 
 ## License
 

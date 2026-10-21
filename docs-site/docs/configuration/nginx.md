@@ -48,7 +48,8 @@ never scans it.
 | `json_guard_reject_duplicate_keys` | `off` | Reject objects with duplicate keys (1024-slot table, allocated only when on; `JG_REJECT_DUP_TABLE` if full) |
 | `json_guard_methods` | `POST PUT PATCH` | HTTP methods that are validated |
 
-A value of `0` for a numeric limit means **unlimited**. Limits are
+A value of `0` for a numeric limit means **unlimited**, except
+`json_guard_max_depth`, where `0` means the 1024 hard ceiling. Limits are
 enforced while streaming, so an over-limit body is rejected as soon as the
 violation is seen — a `tokens_100001` rejection fires ~3.5 ms into the
 stream, not after the whole body arrives.
@@ -152,7 +153,7 @@ location /v1/events/ {
   by core NGINX with 413 before the guard sees them.
 - `client_body_buffer_size` decides whether the body lives in memory
   buffers or is spooled to a `client_body_temp` file. The guard walks
-  either transparently, in 64 KiB chunks.
+  either transparently: memory buffers as-is, temp files in 64 KiB reads.
 - On the ModSecurity side you can now keep `SecRequestBodyLimit` generous
   and **leave partial processing off** — the structural risk it was
   mitigating is handled before libmodsecurity parses anything.

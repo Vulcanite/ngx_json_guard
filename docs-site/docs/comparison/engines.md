@@ -36,28 +36,33 @@ a nutshell: it validates nothing itself.
 | Number length &gt; 256 | pass | **413** | pass | pass |
 | String length &gt; 64 MiB | pass | **413** | pass | pass |
 | Total tokens &gt; 100,000 | pass | **413** | pass | pass |
-| **Classes caught at the edge (of 11)** | **0** | **11** | **7** | **6** |
+| **Classes caught at the edge (of 11)** | **0** | **11** | **7** | **5** |
 
-† ModSecurity's and Coraza's depth/width rejections come from *their own
-fixed internal parser limits*, which you cannot configure. The guard's
-thresholds are directives in `nginx.conf`.
+† ModSecurity's and Coraza's depth and width rejections come from
+`SecRequestBodyJsonDepthLimit 100` and `SecArgumentsLimit 10001`, set in
+the benchmark profiles (`benchmark/modsecurity/*.conf`,
+`benchmark/coraza/*.conf`). Neither engine's JSON body processor caps
+key, number or string length or total tokens (CRS has optional
+argument-length rules, but they run after the full parse); the guard's
+thresholds for all of these are directives in `nginx.conf`.
 
 ```mermaid
 xychart-beta
     title "Structural violation classes rejected at the edge (of 11)"
     x-axis ["Baseline", "JSON Guard", "ModSecurity", "Coraza"]
     y-axis "Classes rejected" 0 --> 11
-    bar [0, 11, 7, 6]
+    bar [0, 11, 7, 5]
 ```
 
 Three takeaways:
 
 1. **Everyone catches plain syntax errors.** If malformed JSON were the
    only concern, any JSON-aware engine would do.
-2. **Only the guard has configurable structural limits.** Depth, key,
-   number, string, token and width limits are nginx directives — the
-   other engines either hardcode a threshold or have none, so a 5,000-deep
-   nest or a 100 MiB single string reaches their parser (and your app)
+2. **Only the guard limits key, number, string and token size.** Depth
+   and argument count are configurable in ModSecurity and Coraza too
+   (`SecRequestBodyJsonDepthLimit`, `SecArgumentsLimit`), but neither
+   body processor caps a single key, number or string, or the total token
+   count, so a 100 MiB single string reaches their parser (and your app)
    unless you add this layer.
 3. **The guard is the only engine rejecting unpaired surrogates.** That
    is strict RFC 8259 behavior; the others tolerate it. Know your

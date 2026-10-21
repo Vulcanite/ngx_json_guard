@@ -38,7 +38,7 @@ const FEATURES = [
       <>
         Well-formedness plus configurable limits — depth, key/string/number
         lengths, token counts, object and array widths. Malformed JSON gets
-        a <b>400</b>, structurally abusive JSON a <b>413</b>. Ten NGINX
+        a <b>400</b>, structurally abusive JSON a <b>413</b>. Eleven NGINX
         directives, sane defaults.
       </>
     ),
@@ -58,9 +58,9 @@ const FEATURES = [
     title: 'Streaming, bounded memory',
     body: (
       <>
-        A non-recursive finite state machine walks the body in 64 KiB
-        chunks with a fixed ~96 KiB parser state. No DOM, no body
-        retention — memory is O(depth), never O(body size).
+        A non-recursive finite state machine walks NGINX&apos;s body buffers
+        (temp files in 64 KiB reads) with a fixed 16,600-byte parser state.
+        No DOM, no body retention — memory never grows with body size.
       </>
     ),
   },

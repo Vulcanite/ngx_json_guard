@@ -22,8 +22,10 @@ What ends up inside (versions pinned in `benchmark/native/versions.env`):
 | ModSecurity-nginx | 1.0.3 |
 | OWASP CRS | 4.25.0 |
 
-The entrypoint verifies that the guard is registered before ModSecurity in
-the PREACCESS phase and fails startup otherwise.
+The entrypoint runs `nginx -t` before starting. Effective ordering
+(guard before ModSecurity in PREACCESS) is checked by the integration
+suite below: a malformed body must get the guard's 400, and the same body
+on the unguarded `/noguard/` route must not.
 
 ## Run the integration tests
 
@@ -34,7 +36,7 @@ make docker-test         # scripts/run_docker_integration.sh
 This brings up the full stack (NGINX + guard + ModSecurity + CRS + echo
 backends) and asserts a matrix of expected status codes: valid bodies
 200, malformed 400, over-limit 413, SQLi 403 — across routes, content
-types, and chunked uploads.
+types, methods, and keep-alive reuse (12 cases).
 
 ## Run it with your own upstream
 

@@ -109,4 +109,5 @@ make waf-perf         # 175-request mixed run (~10 min)
 
 Reports and per-request JSON land under `artifacts/`. The runs quoted
 here: `artifacts/cross-waf/20260824-004254/` and
-`artifacts/waf-perf/20260824-0213{48,36}/`.
+`artifacts/waf-perf/20260824-021348/` and
+`artifacts/waf-perf/20260824-021836/` (local run output, gitignored).
