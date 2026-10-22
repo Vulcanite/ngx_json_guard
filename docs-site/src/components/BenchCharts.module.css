@@ -1,0 +1,159 @@
+.figure {
+  /* Series colors, tuned for contrast on the light theme background. */
+  --jg-guard: #2563b0;
+  --jg-modsec: #b45f12;
+  --jg-coraza: #6d4fc4;
+  --jg-combo: #12807a;
+  --jg-baseline: #7a7f87;
+  --jg-track: var(--ifm-color-emphasis-200);
+
+  margin: 1.5rem 0 2rem;
+  padding: 1rem 1.25rem 0.9rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-global-radius);
+  background: var(--ifm-background-surface-color);
+  max-width: 46rem;
+}
+
+:global([data-theme='dark']) .figure {
+  --jg-guard: #6aa5ec;
+  --jg-modsec: #e59a52;
+  --jg-coraza: #a990f0;
+  --jg-combo: #4cc3b9;
+  --jg-baseline: #9aa0a8;
+  --jg-track: var(--ifm-color-emphasis-200);
+}
+
+.title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  color: var(--ifm-color-content);
+}
+
+.legend {
+  list-style: none;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  font-size: 0.8rem;
+  color: var(--ifm-color-content-secondary);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 2px;
+}
+
+.group + .group {
+  margin-top: 0.9rem;
+}
+
+.groupLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+  color: var(--ifm-color-content);
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 14rem) minmax(0, 1fr) minmax(4.5rem, auto);
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+}
+
+.label {
+  color: var(--ifm-color-content);
+  line-height: 1.25;
+}
+
+.track {
+  display: block;
+  height: 1.1rem;
+  border-radius: 3px;
+  background: var(--jg-track);
+  overflow: hidden;
+}
+
+.bar {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--ifm-color-content);
+}
+
+.unit {
+  font-weight: 400;
+  color: var(--ifm-color-content-secondary);
+}
+
+.tone_guard {
+  background: var(--jg-guard);
+}
+
+.tone_modsec {
+  background: var(--jg-modsec);
+}
+
+.tone_coraza {
+  background: var(--jg-coraza);
+}
+
+.tone_combo {
+  background: var(--jg-combo);
+}
+
+.tone_baseline {
+  background: var(--jg-baseline);
+}
+
+.caption {
+  margin-top: 0.6rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--ifm-color-content-secondary);
+}
+
+/* Phones: label on its own line, bar and value share the next one. */
+@media (max-width: 600px) {
+  .figure {
+    padding: 0.85rem 0.85rem 0.75rem;
+  }
+
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.15rem 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .label {
+    grid-column: 1 / -1;
+  }
+}

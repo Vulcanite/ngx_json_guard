@@ -1,5 +1,12 @@
 # Performance results
 
+import BarChart, {
+  PARSER_THROUGHPUT,
+  GUARD_INSPECTION_P50,
+  PROCESSOR_THROUGHPUT,
+  OUTCOME_LATENCY,
+} from '@site/src/components/BenchCharts';
+
 All numbers are from the fresh runs of 2026-08-24 (commit `08851ee`),
 WAF containers constrained to 2 vCPU / 4 GiB. Full methodology, raw
 tables, and reproduction steps: `BENCHMARK.md` in the repository root.
@@ -18,13 +25,12 @@ Standalone parser, single thread, median of 15 passes, idle host:
 | 10 MiB | 37.8 ms | 265 MiB/s |
 | 20 MiB | 75.7 ms | 264 MiB/s |
 
-```mermaid
-xychart-beta
-    title "Parser throughput by body size (MiB/s, single thread)"
-    x-axis ["100 KiB", "1 MiB", "10 MiB", "20 MiB"]
-    y-axis "MiB/s" 0 --> 300
-    bar [260, 271, 265, 264]
-```
+<BarChart
+  title="Parser throughput by body size (single thread, median of 15 passes)"
+  unit="MiB/s"
+  items={PARSER_THROUGHPUT}
+  caption="Same values as the table above (BENCHMARK.md, section 1). The 92 B row has no throughput figure and is not charted."
+/>
 
 Throughput is flat in body size; memory is flat too — the parser state is
 a 16,600-byte control block regardless of the document (40 KiB extra only
@@ -43,13 +49,12 @@ Guard + ModSecurity + full CRS, 4 workers, 175/175 correct outcomes.
 | 20 MiB clean JSON | 96.3 ms | 2920 ms | 3.3% |
 | 20 MiB, SQLi at tail (403 by CRS) | 82.9 ms | 2031 ms | 4.1% |
 
-```mermaid
-xychart-beta
-    title "Guard inspection time by body size (ms, median)"
-    x-axis ["~100 B", "1 MiB", "20 MiB"]
-    y-axis "milliseconds" 0 --> 100
-    bar [0.01, 4.1, 96.3]
-```
+<BarChart
+  title="Guard inspection time, p50 (module timer, not end-to-end)"
+  unit="ms"
+  items={GUARD_INSPECTION_P50}
+  caption="The Guard p50 column above, from $json_guard_inspection_us. The 0.01 ms small-body value was measured before the per-request double zeroing of the parser was removed (BENCHMARK.md, section 2); re-run make waf-perf for a current figure."
+/>
 
 On an accepted 20 MiB body under full CRS, the guard's timer reports
 **75.2 ms median — 0.67%** of the ModSecurity-only latency for the same
@@ -58,15 +63,24 @@ the entire document and blocks the attack at the far end.
 
 ## Engine throughput (processor suites)
 
-32-request corpus dominated by 1–100 MiB JSON bodies, 4 workers:
+32-request corpus dominated by 1–100 MiB JSON bodies, 4 workers, no CRS.
+Latencies are client-observed end-to-end HTTP times (upload, proxy and
+upstream included), not parser time:
 
-```mermaid
-xychart-beta
-    title "Large-body throughput by engine (MiB/s, 4 workers)"
-    x-axis ["Baseline", "Guard only", "ModSecurity", "Guard+ModSecurity", "Coraza"]
-    y-axis "MiB/s" 0 --> 180
-    bar [127.2, 167.2, 74.8, 105.8, 55.7]
-```
+| Engine | MiB/s | Peak RAM | p50 / p95 |
+|---|---:|---:|---|
+| nginx-baseline | 127.2 | 368 MiB | 639 / 3678 ms |
+| nginx-guard | 167.2 | 363 MiB | 414 / 2579 ms |
+| nginx-modsecurity-processor | 74.8 | 1654 MiB | 593 / 6526 ms |
+| nginx-guard-modsecurity-processor | 105.8 | 1150 MiB | 519 / 3400 ms |
+| coraza-processor | 55.7 | 2148 MiB | 822 / 7894 ms |
+
+<BarChart
+  title="Large-body throughput by engine (4 workers, no CRS)"
+  unit="MiB/s"
+  items={PROCESSOR_THROUGHPUT}
+  caption="MiB/s column of the table above (BENCHMARK.md, section 3). Coraza runs behind Caddy; the other engines run in NGINX."
+/>
 
 The guard-only bar sits *above* baseline because this corpus contains
 malformed and over-limit bodies that the guard rejects early — baseline
@@ -85,13 +99,12 @@ guard+ModSecurity beating ModSecurity alone (105.8 vs 74.8 MiB/s).
 | Token/cardinality over limit | 413 by guard | 241 ms (guard portion 3.5 ms) |
 | SQLi at tail | 403 by CRS | 2031 ms |
 
-```mermaid
-xychart-beta
-    title "20 MiB body: latency by outcome (ms, median)"
-    x-axis ["Accepted (CRS scans)", "Tail SQLi (CRS blocks)", "Malformed tail (guard 400)", "Over limit (guard 413)"]
-    y-axis "milliseconds" 0 --> 3000
-    bar [2920, 2031, 313, 241]
-```
+<BarChart
+  title="20 MiB body: client-observed latency by outcome (median)"
+  unit="ms"
+  items={OUTCOME_LATENCY}
+  caption="Guard + ModSecurity + full CRS, 4 workers. Blue: the guard rejected the body before rules ran. Orange: the body was accepted by the guard and CRS processed it."
+/>
 
 The structural rejects are roughly **10x cheaper** than a full CRS scan —
 that is the budget the guard spends on every accepted body (about 3–5%)
@@ -110,4 +123,6 @@ make waf-perf         # 175-request mixed run (~10 min)
 Reports and per-request JSON land under `artifacts/`. The runs quoted
 here: `artifacts/cross-waf/20260824-004254/` and
 `artifacts/waf-perf/20260824-021348/` and
-`artifacts/waf-perf/20260824-021836/` (local run output, gitignored).
+`artifacts/waf-perf/20260824-021836/` (local run output, gitignored and
+not committed to the repository; the published tables in `BENCHMARK.md`
+are the reference).
