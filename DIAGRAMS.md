@@ -93,7 +93,7 @@ xychart-beta
     title "Structural violation classes rejected at the edge (of 11)"
     x-axis ["Baseline", "JSON Guard", "ModSecurity", "Coraza"]
     y-axis "Classes rejected" 0 --> 11
-    bar [0, 11, 7, 6]
+    bar [0, 11, 6, 5]
 ```
 
 ## 5. Parser throughput by body size
