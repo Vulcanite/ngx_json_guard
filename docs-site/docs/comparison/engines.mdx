@@ -1,5 +1,10 @@
 # Engine comparison: structural validation
 
+import BarChart, {
+  CLASSES_CAUGHT,
+  REJECTION_COST,
+} from '@site/src/components/BenchCharts';
+
 Four engines were run against the same 51-case structural corpus on the
 same host, each in its own container constrained to 2 vCPU / 4 GiB
 (NGINX 1.26.2, libmodsecurity 3.0.13, Coraza 3.7.0 via Caddy 2.11.3,
@@ -36,7 +41,7 @@ a nutshell: it validates nothing itself.
 | Number length &gt; 256 | pass | **413** | pass | pass |
 | String length &gt; 64 MiB | pass | **413** | pass | pass |
 | Total tokens &gt; 100,000 | pass | **413** | pass | pass |
-| **Classes caught at the edge (of 11)** | **0** | **11** | **7** | **5** |
+| **Classes caught at the edge (of 11)** | **0** | **11** | **6** | **5** |
 
 † ModSecurity's and Coraza's depth and width rejections come from
 `SecRequestBodyJsonDepthLimit 100` and `SecArgumentsLimit 10001`, set in
@@ -46,13 +51,13 @@ key, number or string length or total tokens (CRS has optional
 argument-length rules, but they run after the full parse); the guard's
 thresholds for all of these are directives in `nginx.conf`.
 
-```mermaid
-xychart-beta
-    title "Structural violation classes rejected at the edge (of 11)"
-    x-axis ["Baseline", "JSON Guard", "ModSecurity", "Coraza"]
-    y-axis "Classes rejected" 0 --> 11
-    bar [0, 11, 7, 5]
-```
+<BarChart
+  title="Structural violation classes rejected at the edge (of 11)"
+  unit="of 11"
+  items={CLASSES_CAUGHT}
+  max={11}
+  caption="Count of 400/413 cells in each column of the matrix above. ModSecurity and Coraza depth and width rejections depend on the limits set in the benchmark profiles (see †)."
+/>
 
 Three takeaways:
 
@@ -72,13 +77,22 @@ Three takeaways:
 
 ## What rejection costs
 
-From the processor suites (20 MiB bodies, medians):
+From the processor suites (20 MiB bodies, medians; per-case table in
+`artifacts/cross-waf/20260824-004254/COMPARISON.md`, local run output that
+is gitignored and not committed):
 
 | Case | JSON Guard | ModSecurity alone | Guard + ModSecurity |
 |---|---:|---:|---:|
 | Clean 20 MiB, accepted | 476 ms | 696 ms | 829 ms |
 | Malformed tail 20 MiB, rejected | 395 ms | 542 ms | **323 ms** |
 | High-cardinality 20 MiB, accepted | 294 ms | 515 ms | 519 ms |
+
+<BarChart
+  title="20 MiB bodies, no CRS: client-observed median latency"
+  unit="ms"
+  groups={REJECTION_COST}
+  caption="Same values as the table above. These are end-to-end HTTP latencies seen by the client (upload, proxy and upstream included), not parser time; only the guard exposes its own timer. Lower is better."
+/>
 
 Reading: with the guard first, a malformed 20 MiB body is rejected **40%
 faster** than ModSecurity's processor manages alone (323 vs 542 ms) — the

@@ -28,7 +28,7 @@ const STATS = [
   { value: '0.67%', label: 'added latency on an accepted 20 MiB body under full CRS' },
   { value: '~10 µs', label: 'guard cost on a typical small JSON body' },
   { value: '260 MiB/s', label: 'single-threaded streaming parse throughput' },
-  { value: '11 / 11', label: 'structural violation classes rejected (ModSecurity: 7, Coraza: 6)' },
+  { value: '11 / 11', label: 'structural violation classes rejected (ModSecurity: 6, Coraza: 5)' },
 ];
 
 const FEATURES = [
