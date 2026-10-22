@@ -129,6 +129,31 @@ ngx_http_json_guard_now_us(void)
     return (uint64_t) tv.tv_sec * 1000000 + (uint64_t) tv.tv_usec;
 }
 
+
+/* Client-caused rejects (400/413) log at INFO so bad traffic can't flood the error log. */
+static ngx_uint_t
+ngx_http_json_guard_reject_log_level(ngx_int_t rc)
+{
+    if (rc == NGX_HTTP_BAD_REQUEST
+        || rc == NGX_HTTP_REQUEST_ENTITY_TOO_LARGE)
+    {
+        return NGX_LOG_INFO;
+    }
+
+    return NGX_LOG_ERR;
+}
+
+
+static void
+ngx_http_json_guard_log_reject(ngx_http_request_t *r,
+    ngx_http_json_guard_ctx_t *ctx, ngx_int_t rc)
+{
+    ngx_log_error(ngx_http_json_guard_reject_log_level(rc),
+                  r->connection->log, 0,
+                  "json_guard: REJECT status=%i err=%s",
+                  rc, jg_error_string(jg_parser_error(&ctx->parser)));
+}
+
 static ngx_command_t ngx_http_json_guard_commands[] = {
 
     { ngx_string("json_guard"),
@@ -510,10 +535,13 @@ ngx_http_json_guard_feed_chain(ngx_http_request_t *r,
     u_char       *chunk;
     off_t         offset, remaining;
     ssize_t       n;
+    ngx_uint_t    fed_memory;
 
     chunk = NULL;
 
     for (; cl; cl = cl->next) {
+        fed_memory = 0;
+
         b = cl->buf;
         if (b == NULL) {
             continue;
@@ -532,10 +560,16 @@ ngx_http_json_guard_feed_chain(ngx_http_request_t *r,
                 if (res != JG_OK && res != JG_NEED_MORE) {
                     return ngx_http_json_guard_result_to_status(res);
                 }
+                fed_memory = 1;
             }
         }
 
-        if (b->in_file) {
+        /*
+         * A buf can carry the same bytes in memory and in the temp file.
+         * If its memory bytes were fed, skip the file range so the body
+         * is not parsed twice. Empty in-memory bufs still walk the file.
+         */
+        if (b->in_file && !fed_memory) {
             /*
              * File-backed buffer: read the referenced range in bounded
              * chunks so we never map the whole body into module memory.
@@ -602,6 +636,7 @@ ngx_http_json_guard_feed_file(ngx_http_request_t *r,
     off_t         offset, remaining;
     size_t        to_read;
     jg_result_t   res;
+    ngx_int_t     rc;
     ngx_file_t    file;
 
     if (tf == NULL) {
@@ -661,10 +696,12 @@ ngx_http_json_guard_feed_file(ngx_http_request_t *r,
 
         res = jg_parser_feed(&ctx->parser, buf, (size_t) n);
         if (res != JG_OK && res != JG_NEED_MORE) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+            rc = ngx_http_json_guard_result_to_status(res);
+            ngx_log_error(ngx_http_json_guard_reject_log_level(rc),
+                          r->connection->log, 0,
                           "json_guard: reject while reading body file: %s",
                           jg_error_string(jg_parser_error(&ctx->parser)));
-            return ngx_http_json_guard_result_to_status(res);
+            return rc;
         }
 
         offset += n;
@@ -742,18 +779,14 @@ ngx_http_json_guard_process_body(ngx_http_request_t *r,
     if (rb->bufs) {
         rc = ngx_http_json_guard_feed_chain(r, ctx, rb->bufs);
         if (rc != NGX_OK) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                          "json_guard: REJECT status=%i err=%s",
-                          rc, jg_error_string(jg_parser_error(&ctx->parser)));
+            ngx_http_json_guard_log_reject(r, ctx, rc);
             return rc;
         }
     } else if (rb->temp_file && rb->temp_file->file.fd != NGX_INVALID_FILE) {
         rc = ngx_http_json_guard_feed_file(r, ctx, rb->temp_file);
         if (rc != NGX_OK) {
             /* feed_file already logs some paths; ensure REJECT tag exists */
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                          "json_guard: REJECT status=%i err=%s",
-                          rc, jg_error_string(jg_parser_error(&ctx->parser)));
+            ngx_http_json_guard_log_reject(r, ctx, rc);
             return rc;
         }
     } else {
@@ -764,11 +797,9 @@ ngx_http_json_guard_process_body(ngx_http_request_t *r,
 
     res = jg_parser_finish(&ctx->parser);
     if (res != JG_OK) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
-                      "json_guard: REJECT status=%i err=%s",
-                      (ngx_int_t) ngx_http_json_guard_result_to_status(res),
-                      jg_error_string(jg_parser_error(&ctx->parser)));
-        return ngx_http_json_guard_result_to_status(res);
+        rc = ngx_http_json_guard_result_to_status(res);
+        ngx_http_json_guard_log_reject(r, ctx, rc);
+        return rc;
     }
 
     /* INFO is available for integration diagnostics without production noise. */

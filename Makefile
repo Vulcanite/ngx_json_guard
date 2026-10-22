@@ -115,4 +115,4 @@ native-api-collect:
 
 clean:
 	rm -f tests/test_json_guard_parser tests/test_json_guard_parser_asan \
-		tests/bench_json_guard_parser
+		tests/bench_json_guard_parser tests/bench_json_guard_repeat
